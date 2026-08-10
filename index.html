@@ -1,0 +1,1965 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>AI VISION 4D</title>
+  <style>
+    :root{
+      --bg:#05070d;
+      --bg2:#0a1020;
+      --panel:rgba(11,16,31,.72);
+      --panel2:rgba(8,12,22,.86);
+      --line:rgba(110,205,255,.22);
+      --text:#ebf7ff;
+      --muted:#8fb3c8;
+      --accent:#67d7ff;
+      --accent2:#9a7dff;
+      --good:#49f7b7;
+      --bad:#ff6b8a;
+      --warn:#ffd36b;
+      --shadow:0 0 35px rgba(103,215,255,.14);
+      --radius:22px;
+      --radius2:30px;
+      --blur:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{width:100%;height:100%;margin:0;background:
+      radial-gradient(circle at 20% 20%, rgba(103,215,255,.08), transparent 30%),
+      radial-gradient(circle at 80% 0%, rgba(154,125,255,.11), transparent 30%),
+      radial-gradient(circle at 50% 100%, rgba(73,247,183,.05), transparent 24%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+      color:var(--text); overflow:hidden; font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
+    button, select, input, label { font: inherit; }
+    #app{position:fixed; inset:0; overflow:hidden;}
+    #cameraStage{
+      position:absolute; inset:0;
+      display:grid;
+      place-items:stretch;
+      background:#000;
+    }
+    #cameraVideo{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:cover;
+      transform-origin:center center;
+      filter:contrast(1.04) saturate(1.07) brightness(.92);
+    }
+    #overlay2d, #webgl, #fxCanvas{
+      position:absolute; inset:0; width:100%; height:100%;
+      pointer-events:none;
+    }
+    #uiLayer{
+      position:absolute; inset:0;
+      display:flex; flex-direction:column;
+      pointer-events:none;
+    }
+    .topBar{
+      display:flex; justify-content:space-between; gap:12px;
+      padding:16px;
+      pointer-events:auto;
+    }
+    .brand{
+      min-width:min(520px,100%);
+      padding:16px 18px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(15,21,40,.76), rgba(8,12,22,.72));
+      border-radius:var(--radius2);
+      backdrop-filter: blur(var(--blur));
+      box-shadow:var(--shadow);
+    }
+    .brand h1{
+      margin:0;
+      font-size:clamp(24px, 3.2vw, 42px);
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      background:linear-gradient(90deg, #fff, var(--accent), #b9a5ff);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow:0 0 18px rgba(103,215,255,.18);
+    }
+    .brand .sub{
+      margin-top:6px; color:var(--muted); font-size:13px; letter-spacing:.04em
+    }
+    .hud{
+      display:grid;
+      gap:10px;
+      min-width:min(330px,100%);
+      padding:14px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(15,21,40,.78), rgba(8,12,22,.72));
+      border-radius:var(--radius2);
+      backdrop-filter: blur(var(--blur));
+      box-shadow:var(--shadow);
+    }
+    .hudRow{
+      display:flex; justify-content:space-between; gap:12px;
+      font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--muted);
+    }
+    .hudRow b{ color:var(--text); font-weight:700; }
+    .statusPill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      background:rgba(103,215,255,.08); border:1px solid rgba(103,215,255,.18);
+      color:var(--text); font-size:12px; letter-spacing:.06em;
+    }
+    .dot{width:8px;height:8px;border-radius:50%; background:var(--good); box-shadow:0 0 12px currentColor}
+    .dot.bad{background:var(--bad)}
+    .dot.warn{background:var(--warn)}
+    .side{
+      position:absolute; top:96px; bottom:16px; right:16px;
+      width:min(360px, calc(100vw - 32px));
+      display:flex; flex-direction:column; gap:12px;
+      pointer-events:auto;
+    }
+    .panel{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(15,21,40,.78), rgba(8,12,22,.72));
+      border-radius:var(--radius2);
+      backdrop-filter: blur(var(--blur));
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .panel .head{
+      padding:14px 16px;
+      display:flex; justify-content:space-between; align-items:center;
+      border-bottom:1px solid rgba(110,205,255,.12);
+      letter-spacing:.1em; text-transform:uppercase; font-size:12px; color:#dff6ff;
+    }
+    .panel .content{ padding:14px 16px; display:grid; gap:12px; }
+    .control{
+      display:grid; gap:8px; font-size:12px; color:var(--muted);
+    }
+    .control label{ display:flex; justify-content:space-between; gap:10px; align-items:center; letter-spacing:.05em; text-transform:uppercase; }
+    .control select, .control input[type="range"], .control button, .control input[type="checkbox"]{
+      width:100%;
+    }
+    select, button, input[type="text"]{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(110,205,255,.18);
+      color:var(--text);
+      border-radius:14px;
+      padding:11px 12px;
+      outline:none;
+    }
+    select:focus, button:focus, input[type="text"]:focus{
+      border-color:rgba(103,215,255,.5);
+      box-shadow:0 0 0 3px rgba(103,215,255,.12);
+    }
+    button{
+      cursor:pointer;
+      transition:transform .18s ease, background .18s ease, border-color .18s ease, opacity .18s ease;
+    }
+    button:hover{ transform:translateY(-1px); border-color:rgba(103,215,255,.45); background:rgba(103,215,255,.08); }
+    button.primary{
+      background:linear-gradient(180deg, rgba(103,215,255,.22), rgba(154,125,255,.16));
+      border-color:rgba(103,215,255,.3);
+      box-shadow:0 0 18px rgba(103,215,255,.14);
+    }
+    button.danger{
+      background:linear-gradient(180deg, rgba(255,107,138,.18), rgba(255,107,138,.08));
+      border-color:rgba(255,107,138,.3);
+    }
+    .miniGrid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .small{ font-size:11px; color:var(--muted); line-height:1.4; }
+    .vStack{ display:grid; gap:8px; }
+    .chip{
+      display:inline-flex; align-items:center; justify-content:space-between; gap:12px;
+      width:100%; padding:10px 12px; border-radius:14px;
+      background:rgba(255,255,255,.04); border:1px solid rgba(110,205,255,.14);
+      font-size:12px; letter-spacing:.05em; text-transform:uppercase; color:var(--text);
+    }
+    .chip span{ color:var(--muted); text-transform:none; letter-spacing:0; }
+    .footerBar{
+      position:absolute; left:16px; right:16px; bottom:16px;
+      display:flex; gap:12px; justify-content:space-between; align-items:flex-end;
+      pointer-events:none;
+    }
+    .transport{
+      display:flex; flex-wrap:wrap; gap:8px;
+      pointer-events:auto;
+      max-width:min(850px, 100%);
+    }
+    .transport button{ padding:10px 14px; }
+    .loadingScreen, .welcomeScreen, .errorScreen{
+      position:absolute; inset:0; display:grid; place-items:center;
+      background:radial-gradient(circle at 50% 30%, rgba(103,215,255,.08), rgba(3,5,10,.96) 55%, rgba(1,2,5,1));
+      z-index:20;
+    }
+    .hidden{ display:none !important; }
+    .card{
+      width:min(780px, calc(100vw - 28px));
+      padding:28px;
+      border:1px solid rgba(110,205,255,.16);
+      border-radius:34px;
+      background:linear-gradient(180deg, rgba(13,19,35,.84), rgba(8,12,22,.92));
+      backdrop-filter: blur(20px);
+      box-shadow:0 0 60px rgba(103,215,255,.14);
+    }
+    .card h2{ margin:0 0 10px; font-size:clamp(28px,5vw,56px); letter-spacing:.12em; text-transform:uppercase; }
+    .card p{ margin:8px 0 0; color:var(--muted); line-height:1.6; }
+    .loader{
+      margin-top:22px;
+      height:8px; border-radius:999px; overflow:hidden;
+      background:rgba(255,255,255,.06); border:1px solid rgba(110,205,255,.12);
+    }
+    .loader > div{
+      width:40%; height:100%;
+      background:linear-gradient(90deg, rgba(103,215,255,.1), rgba(103,215,255,1), rgba(154,125,255,1));
+      animation: sweep 1.3s linear infinite;
+      box-shadow:0 0 12px rgba(103,215,255,.65);
+    }
+    @keyframes sweep{
+      from{ transform:translateX(-120%); }
+      to{ transform:translateX(280%); }
+    }
+    .stageList{
+      margin-top:20px;
+      display:grid; gap:10px;
+      font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--muted);
+    }
+    .stageList .active{ color:#fff; }
+    .errorBox{
+      width:min(740px, calc(100vw - 28px));
+      padding:24px;
+      border-radius:30px;
+      border:1px solid rgba(255,107,138,.22);
+      background:linear-gradient(180deg, rgba(38,13,20,.92), rgba(14,10,16,.96));
+      box-shadow:0 0 40px rgba(255,107,138,.12);
+    }
+    .errorBox h2{ margin:0 0 10px; color:#ffd8e3; font-size:clamp(24px,5vw,38px); letter-spacing:.08em; text-transform:uppercase; }
+    .errorBox p{ color:#f5c9d4; line-height:1.6; margin:8px 0; }
+    .errorActions{ display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+    .legend{
+      position:absolute; left:16px; top:96px;
+      max-width:min(420px, calc(100vw - 32px));
+      pointer-events:auto;
+    }
+    .legend .content{ display:grid; gap:10px; }
+    .legendText{ font-size:12px; color:var(--muted); line-height:1.45; }
+    .kbd{
+      display:inline-block; min-width:28px; text-align:center;
+      padding:3px 7px; margin:0 3px; border-radius:8px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(110,205,255,.14);
+      color:var(--text); font-size:11px;
+    }
+    .fingerTrail{
+      position:absolute; width:14px; height:14px; border-radius:50%;
+      pointer-events:none;
+      box-shadow:0 0 20px rgba(103,215,255,.9), 0 0 40px rgba(154,125,255,.4);
+      background:radial-gradient(circle at 35% 35%, #fff, var(--accent) 35%, rgba(103,215,255,.05) 72%);
+      transform:translate(-50%,-50%);
+      opacity:0;
+    }
+    .mirrorHint{
+      font-size:11px; color:var(--muted); margin-top:8px;
+    }
+    @media (max-width: 900px){
+      .topBar{ flex-direction:column; }
+      .side{ position:absolute; top:auto; right:16px; left:16px; bottom:84px; width:auto; height:auto; }
+      .legend{ top:unset; left:16px; right:16px; bottom:16px; max-width:none; }
+      .footerBar{ flex-direction:column; align-items:stretch; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="cameraStage">
+      <video id="cameraVideo" playsinline muted autoplay></video>
+      <canvas id="overlay2d"></canvas>
+      <canvas id="webgl"></canvas>
+      <canvas id="fxCanvas"></canvas>
+    </div>
+
+    <div id="uiLayer">
+      <div class="topBar">
+        <div class="brand">
+          <h1>AI VISION 4D</h1>
+          <div class="sub">Real-time spatial interaction powered by your camera.</div>
+          <div class="mirrorHint" id="privacyNote">Camera processing is performed locally in your browser whenever supported by the selected models. Camera video is not uploaded or recorded by this application.</div>
+        </div>
+
+        <div class="hud" id="hudPanel">
+          <div class="hudRow"><span>CAMERA</span><b id="hudCamera">DISCONNECTED</b></div>
+          <div class="hudRow"><span>VISION</span><b id="hudVision">IDLE</b></div>
+          <div class="hudRow"><span>HANDS</span><b id="hudHands">0</b></div>
+          <div class="hudRow"><span>FACE</span><b id="hudFace">NONE</b></div>
+          <div class="hudRow"><span>GESTURE</span><b id="hudGesture">—</b></div>
+          <div class="hudRow"><span>CONFIDENCE</span><b id="hudConfidence">0%</b></div>
+          <div class="hudRow"><span>FPS</span><b id="hudFps">0</b></div>
+          <div class="hudRow"><span>TRACKING</span><b id="hudTracking">WAITING</b></div>
+          <div class="hudRow"><span>RENDERER</span><b id="hudRenderer">UNINITIALIZED</b></div>
+        </div>
+      </div>
+
+      <div class="legend panel">
+        <div class="head">Gestures & Keys</div>
+        <div class="content">
+          <div class="legendText">
+            Index finger = cursor. Pinch = select/grab. Two-hand spread = scale. Peace sign = mode switch. Swipe = navigation. Air-draw with the index finger and release to spawn shapes.
+          </div>
+          <div class="legendText">
+            Keyboard fallback: <span class="kbd">Tab</span> cycles buttons, <span class="kbd">←</span><span class="kbd">→</span> selects object, <span class="kbd">Delete</span> removes, <span class="kbd">D</span> duplicates, <span class="kbd">W</span> toggles wireframe, <span class="kbd">P</span> pauses tracking.
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <div class="panel">
+          <div class="head">Connection & Camera</div>
+          <div class="content">
+            <button class="primary" id="enableCameraBtn">ENABLE CAMERA</button>
+            <button id="stopCameraBtn" class="danger">STOP CAMERA</button>
+            <button id="reconnectBtn">RECONNECT</button>
+            <div class="control">
+              <label>Camera <span id="cameraCountLabel">0 devices</span></label>
+              <select id="cameraSelect"></select>
+            </div>
+            <div class="control">
+              <label>Resolution <span id="resolutionLabel">1280×720</span></label>
+              <select id="resolutionSelect">
+                <option value="640x480">640×480</option>
+                <option value="1280x720" selected>1280×720</option>
+                <option value="1920x1080">1920×1080</option>
+              </select>
+            </div>
+            <div class="control">
+              <label>FPS <span id="fpsLabel">30</span></label>
+              <select id="fpsSelect">
+                <option value="24">24</option>
+                <option value="30" selected>30</option>
+                <option value="60">60</option>
+              </select>
+            </div>
+            <div class="control">
+              <label>Mirror mode <span><input id="mirrorToggle" type="checkbox" checked /></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="head">Systems</div>
+          <div class="content">
+            <div class="chip">Hand Tracking <span id="sysHand">ON</span></div>
+            <div class="chip">Face Tracking <span id="sysFace">ON</span></div>
+            <div class="chip">Smoothing <span id="sysSmooth">0.68</span></div>
+            <div class="chip">Gesture Sensitivity <span id="sysSensitivity">0.50</span></div>
+            <div class="miniGrid">
+              <button id="toggleHandsBtn">Hands</button>
+              <button id="toggleFaceBtn">Face</button>
+              <button id="toggleParticlesBtn">Particles</button>
+              <button id="toggleBloomBtn">Glow</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="head">Settings</div>
+          <div class="content">
+            <div class="control">
+              <label>Smoothing <span id="smoothValue">0.68</span></label>
+              <input id="smoothRange" type="range" min="0" max="0.95" step="0.01" value="0.68"/>
+            </div>
+            <div class="control">
+              <label>Gesture Threshold <span id="thresholdValue">0.50</span></label>
+              <input id="thresholdRange" type="range" min="0.2" max="0.9" step="0.01" value="0.50"/>
+            </div>
+            <div class="control">
+              <label>Particles <span id="particleValue">1500</span></label>
+              <input id="particleRange" type="range" min="300" max="4000" step="100" value="1500"/>
+            </div>
+            <div class="control">
+              <label>Performance Mode <span><input id="perfToggle" type="checkbox" /></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="head">Debug</div>
+          <div class="content">
+            <div class="small" id="debugInfo">Waiting for initialization.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footerBar">
+        <div class="transport panel" style="padding:10px">
+          <button id="spawnCubeBtn">Cube</button>
+          <button id="spawnSphereBtn">Sphere</button>
+          <button id="spawnTriBtn">Triangle</button>
+          <button id="spawnPyrBtn">Pyramid</button>
+          <button id="spawnConeBtn">Cone</button>
+          <button id="spawnTorusBtn">Torus</button>
+          <button id="spawnIcosaBtn">Icosahedron</button>
+          <button id="spawnCrystalBtn">Crystal</button>
+          <button id="toggle4DBtn">4D Mode</button>
+          <button id="resetSceneBtn">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="welcomeScreen" class="welcomeScreen">
+      <div class="card">
+        <h2>AI VISION 4D</h2>
+        <p>Real-time spatial interaction powered by your camera.</p>
+        <div class="loader"><div></div></div>
+        <div class="stageList" id="startupStages"></div>
+        <p class="small">Camera access requires HTTPS or localhost. The camera must be approved by you in the browser prompt.</p>
+      </div>
+    </div>
+
+    <div id="loadingScreen" class="loadingScreen hidden">
+      <div class="card">
+        <h2 id="loadingTitle">BOOTING</h2>
+        <p id="loadingDetail">Starting the spatial interface.</p>
+        <div class="loader"><div></div></div>
+        <div class="stageList" id="loadingStages"></div>
+      </div>
+    </div>
+
+    <div id="errorScreen" class="errorScreen hidden">
+      <div class="errorBox">
+        <h2 id="errorTitle">CAMERA ERROR</h2>
+        <p id="errorMessage"></p>
+        <div class="errorActions">
+          <button class="primary" id="errorRetryBtn">RETRY</button>
+          <button id="errorHelpBtn">CAMERA HELP</button>
+          <button id="errorDismissBtn">DISMISS</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fingerTrail" id="fingerTrail"></div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js";
+    import { FilesetResolver, HandLandmarker, FaceLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/vision_bundle.mjs";
+
+    const APP_NAME = "AI VISION 4D";
+    const MODEL_URLS = {
+      hand: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task",
+      face: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+      wasm: "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22-rc.20250304/wasm"
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const smoothstep = (a, b, x) => {
+      const t = clamp((x - a) / (b - a), 0, 1);
+      return t * t * (3 - 2 * t);
+    };
+    const now = () => performance.now();
+    const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const dist3 = (a, b) => Math.hypot((a.x - b.x), (a.y - b.y), ((a.z ?? 0) - (b.z ?? 0)));
+    const angle2 = (a, b) => Math.atan2(b.y - a.y, b.x - a.x);
+    const toFixed = (n, d = 2) => Number.isFinite(n) ? n.toFixed(d) : "0.00";
+
+    const applyMirrorTransform = (mirror) => {
+      const value = mirror ? "scaleX(-1)" : "none";
+      ["cameraVideo", "overlay2d", "webgl", "fxCanvas"].forEach(id => {
+        const el = $(id);
+        if (el) {
+          el.style.transform = value;
+        }
+      });
+    };
+
+    class StorageManager {
+      static load() {
+        try { return JSON.parse(localStorage.getItem("aiVision4D.settings") || "{}"); }
+        catch { return {}; }
+      }
+      static save(state) {
+        try { localStorage.setItem("aiVision4D.settings", JSON.stringify(state)); } catch {}
+      }
+    }
+
+    class ErrorManager {
+      constructor(app) { this.app = app; }
+      show(title, message) {
+        $("errorTitle").textContent = title;
+        $("errorMessage").textContent = message;
+        $("errorScreen").classList.remove("hidden");
+      }
+      hide() { $("errorScreen").classList.add("hidden"); }
+      handle(error, fallbackTitle = "ERROR") {
+        const name = error?.name || "UnknownError";
+        const msg = error?.message || String(error || "An unknown error occurred.");
+        this.show(fallbackTitle, `${name}: ${msg}`);
+        this.app.setStatus("error");
+        this.app.setLoading(false);
+        this.app.setStartupStages([]);
+        console.error(error);
+      }
+    }
+
+    class PerformanceManager {
+      constructor() {
+        this.frameTimes = [];
+        this.fps = 0;
+        this.inferenceMs = 0;
+        this.renderMs = 0;
+        this.lastHUD = 0;
+        this.lowPower = false;
+      }
+      sampleFrame(ts) {
+        this.frameTimes.push(ts);
+        while (this.frameTimes.length > 60) this.frameTimes.shift();
+        if (this.frameTimes.length >= 2) {
+          const span = this.frameTimes.at(-1) - this.frameTimes[0];
+          this.fps = span > 0 ? ((this.frameTimes.length - 1) * 1000) / span : 0;
+        }
+      }
+      shouldUpdateHUD(ts) { return ts - this.lastHUD > 120; }
+      markHUD(ts) { this.lastHUD = ts; }
+    }
+
+    class CameraManager {
+      constructor(app) {
+        this.app = app;
+        this.video = $("cameraVideo");
+        this.stream = null;
+        this.deviceId = localStorage.getItem("aiVision4D.cameraId") || "";
+        this.mirror = true;
+        this.devices = [];
+        this.constraints = { width: 1280, height: 720, frameRate: 30 };
+        this.boundDeviceChange = this.handleDeviceChange.bind(this);
+      }
+      async ensureSecureContext() {
+        if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+          throw Object.assign(new Error("Camera access requires HTTPS or localhost."), { name: "SecurityError" });
+        }
+      }
+      async refreshDevices() {
+        if (!navigator.mediaDevices?.enumerateDevices) return [];
+        const list = await navigator.mediaDevices.enumerateDevices();
+        this.devices = list.filter(d => d.kind === "videoinput");
+        const select = $("cameraSelect");
+        select.innerHTML = "";
+        this.devices.forEach((dev, i) => {
+          const opt = document.createElement("option");
+          opt.value = dev.deviceId;
+          opt.textContent = dev.label || `Camera ${i + 1}`;
+          select.appendChild(opt);
+        });
+        $("cameraCountLabel").textContent = `${this.devices.length} devices`;
+        if (this.deviceId && this.devices.some(d => d.deviceId === this.deviceId)) select.value = this.deviceId;
+        else if (this.devices[0]) select.value = this.devices[0].deviceId;
+        this.deviceId = select.value || "";
+        localStorage.setItem("aiVision4D.cameraId", this.deviceId);
+        return this.devices;
+      }
+      stop() {
+        if (this.stream) {
+          this.stream.getTracks().forEach(t => t.stop());
+          this.stream = null;
+        }
+        this.video.srcObject = null;
+      }
+      async start() {
+        await this.ensureSecureContext();
+        const res = $("resolutionSelect").value.split("x").map(Number);
+        const fps = Number($("fpsSelect").value);
+        this.constraints = { width: res[0], height: res[1], frameRate: fps };
+        this.mirror = $("mirrorToggle").checked;
+        applyMirrorTransform(this.mirror);
+
+        this.stop();
+
+        const base = {
+          audio: false,
+          video: {
+            width: { ideal: res[0] },
+            height: { ideal: res[1] },
+            frameRate: { ideal: fps, max: fps },
+            ...(this.deviceId ? { deviceId: { exact: this.deviceId } } : { facingMode: "user" })
+          }
+        };
+
+        try {
+          this.stream = await navigator.mediaDevices.getUserMedia(base);
+        } catch (err) {
+          if (err && err.name === "OverconstrainedError") {
+            const relaxed = {
+              audio: false,
+              video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: Math.min(30, fps) },
+                ...(this.deviceId ? { deviceId: { exact: this.deviceId } } : { facingMode: "user" })
+              }
+            };
+            this.stream = await navigator.mediaDevices.getUserMedia(relaxed);
+          } else {
+            throw err;
+          }
+        }
+
+        this.video.srcObject = this.stream;
+        this.video.muted = true;
+        this.video.playsInline = true;
+        this.video.autoplay = true;
+        await this.video.play();
+        await this.refreshDevices();
+
+        navigator.mediaDevices.addEventListener?.("devicechange", this.boundDeviceChange);
+        return this.stream;
+      }
+      async handleDeviceChange() {
+        const old = this.deviceId;
+        await this.refreshDevices();
+        if (old && !this.devices.some(d => d.deviceId === old)) {
+          this.deviceId = this.devices[0]?.deviceId || "";
+          localStorage.setItem("aiVision4D.cameraId", this.deviceId);
+        }
+      }
+      get isActive() { return !!this.stream && this.video.readyState >= 2; }
+      get size() { return { width: this.video.videoWidth || 1280, height: this.video.videoHeight || 720 }; }
+    }
+
+    class VisionManager {
+      constructor(app) {
+        this.app = app;
+        this.handLandmarker = null;
+        this.faceLandmarker = null;
+        this.loaded = false;
+        this.lastHandResult = null;
+        this.lastFaceResult = null;
+        this.videoRunning = false;
+      }
+      async initialize() {
+        const vision = await FilesetResolver.forVisionTasks(MODEL_URLS.wasm);
+        const handOptions = {
+          baseOptions: { modelAssetPath: MODEL_URLS.hand, delegate: "GPU" },
+          numHands: 2,
+          runningMode: "VIDEO",
+          minHandDetectionConfidence: 0.55,
+          minHandPresenceConfidence: 0.55,
+          minTrackingConfidence: 0.5
+        };
+        const faceOptions = {
+          baseOptions: { modelAssetPath: MODEL_URLS.face, delegate: "GPU" },
+          runningMode: "VIDEO",
+          numFaces: 1,
+          minFaceDetectionConfidence: 0.55,
+          minFacePresenceConfidence: 0.55,
+          minTrackingConfidence: 0.5,
+          outputFaceBlendshapes: true,
+          outputFacialTransformationMatrixes: true
+        };
+
+        try {
+          this.handLandmarker = await HandLandmarker.createFromOptions(vision, handOptions);
+        } catch (e) {
+          handOptions.baseOptions.delegate = "CPU";
+          this.handLandmarker = await HandLandmarker.createFromOptions(vision, handOptions);
+        }
+        try {
+          this.faceLandmarker = await FaceLandmarker.createFromOptions(vision, faceOptions);
+        } catch (e) {
+          faceOptions.baseOptions.delegate = "CPU";
+          this.faceLandmarker = await FaceLandmarker.createFromOptions(vision, faceOptions);
+        }
+        this.loaded = true;
+      }
+      async processVideo(video, tsMs) {
+        if (!this.loaded || !video || video.readyState < 2) return null;
+        const hand = this.handLandmarker.detectForVideo(video, tsMs);
+        const face = this.faceLandmarker.detectForVideo(video, tsMs);
+        this.lastHandResult = hand;
+        this.lastFaceResult = face;
+        return { hand, face };
+      }
+      get handCount() { return this.lastHandResult?.landmarks?.length || 0; }
+      get faceCount() { return this.lastFaceResult?.faceLandmarks?.length || 0; }
+    }
+
+    class GestureEngine {
+      constructor(app) {
+        this.app = app;
+        this.history = [];
+        this.activeGesture = "—";
+        this.confidence = 0;
+        this.cooldowns = new Map();
+        this.holdPinch = false;
+        this.pointing = false;
+        this.openPalm = false;
+        this.fist = false;
+        this.lastPinch = false;
+        this.selectedHandIndex = 0;
+        this.modeIndex = 0;
+        this.lastSwipeTs = 0;
+        this.cursor = { x: 0.5, y: 0.5, z: 0 };
+        this.smoothed = new Map();
+      }
+
+      smoothPoint(key, point, factor) {
+        const prev = this.smoothed.get(key) || point;
+        const out = {
+          x: lerp(prev.x, point.x, 1 - factor),
+          y: lerp(prev.y, point.y, 1 - factor),
+          z: lerp(prev.z ?? 0, point.z ?? 0, 1 - factor)
+        };
+        this.smoothed.set(key, out);
+        return out;
+      }
+
+      isFingerExtended(lm, tip, pip) {
+        return lm[tip].y < lm[pip].y - 0.02;
+      }
+      isThumbExtended(lm, handedness) {
+        const tip = lm[4], ip = lm[3], mcp = lm[2];
+        const horiz = handedness === "Right" ? tip.x > ip.x : tip.x < ip.x;
+        return horiz && dist2(tip, mcp) > dist2(ip, mcp) * 0.85;
+      }
+
+      detectHandGestures(hand, handedness, ts, index) {
+        const lm = hand;
+        const wrist = lm[0];
+        const indexTip = lm[8], indexPip = lm[6];
+        const middleTip = lm[12], middlePip = lm[10];
+        const ringTip = lm[16], ringPip = lm[14];
+        const pinkyTip = lm[20], pinkyPip = lm[18];
+        const thumbTip = lm[4], thumbIp = lm[3];
+        const palm = {
+          x: (lm[0].x + lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 5,
+          y: (lm[0].y + lm[5].y + lm[9].y + lm[13].y + lm[17].y) / 5,
+          z: (lm[0].z + lm[5].z + lm[9].z + lm[13].z + lm[17].z) / 5
+        };
+        const palmSize = Math.max(0.08, dist2(lm[5], lm[17]));
+        const point = this.isFingerExtended(lm, 8, 6) && !this.isFingerExtended(lm, 12, 10) && !this.isFingerExtended(lm, 16, 14) && !this.isFingerExtended(lm, 20, 18);
+        const openPalm = this.isFingerExtended(lm, 8, 6) && this.isFingerExtended(lm, 12, 10) && this.isFingerExtended(lm, 16, 14) && this.isFingerExtended(lm, 20, 18) && this.isThumbExtended(lm, handedness);
+        const fist = !this.isFingerExtended(lm, 8, 6) && !this.isFingerExtended(lm, 12, 10) && !this.isFingerExtended(lm, 16, 14) && !this.isFingerExtended(lm, 20, 18) && dist2(indexTip, wrist) < palmSize * 0.95;
+        const pinchDist = dist2(thumbTip, indexTip);
+        const pinch = pinchDist < palmSize * 0.45;
+        const thumbsUp = this.isThumbExtended(lm, handedness) && !this.isFingerExtended(lm, 8, 6) && !this.isFingerExtended(lm, 12, 10) && !this.isFingerExtended(lm, 16, 14) && !this.isFingerExtended(lm, 20, 18) && (thumbTip.y < wrist.y - 0.03);
+        const peace = this.isFingerExtended(lm, 8, 6) && this.isFingerExtended(lm, 12, 10) && !this.isFingerExtended(lm, 16, 14) && !this.isFingerExtended(lm, 20, 18);
+        const swipe = this.detectSwipe(index, palm, ts);
+
+        const confidence = clamp(
+          (point ? .78 : .15) + (pinch ? .2 : 0) + (openPalm ? .15 : 0) + (thumbsUp ? .12 : 0),
+          0, 1
+        );
+
+        let gesture = "TRACKING";
+        if (swipe) gesture = swipe;
+        else if (peace) gesture = "PEACE";
+        else if (thumbsUp) gesture = "THUMBS_UP";
+        else if (fist) gesture = "FIST";
+        else if (pinch && this.lastPinch) gesture = "PINCH_HOLD";
+        else if (pinch) gesture = "PINCH";
+        else if (point) gesture = "POINT";
+        else if (openPalm) gesture = "OPEN_PALM";
+
+        this.cursor = this.app.camera.mirror ? { x: 1 - indexTip.x, y: indexTip.y, z: indexTip.z } : { x: indexTip.x, y: indexTip.y, z: indexTip.z };
+        const smoothCursor = this.smoothPoint(`cursor-${index}`, this.cursor, this.app.settings.smoothing);
+        this.activeGesture = gesture;
+        this.confidence = confidence;
+        this.pointing = point;
+        this.openPalm = openPalm;
+        this.fist = fist;
+        this.lastPinch = pinch;
+
+        return {
+          gesture, confidence, point, pinch, openPalm, fist, thumbsUp, peace,
+          pinchDist,
+          palm, palmSize,
+          indexTip: smoothCursor,
+          wrist: this.smoothPoint(`wrist-${index}`, { x: wrist.x, y: wrist.y, z: wrist.z || 0 }, this.app.settings.smoothing),
+          thumbTip: this.smoothPoint(`thumb-${index}`, { x: thumbTip.x, y: thumbTip.y, z: thumbTip.z || 0 }, this.app.settings.smoothing),
+          middleTip: this.smoothPoint(`middle-${index}`, { x: middleTip.x, y: middleTip.y, z: middleTip.z || 0 }, this.app.settings.smoothing),
+          ringTip: this.smoothPoint(`ring-${index}`, { x: ringTip.x, y: ringTip.y, z: ringTip.z || 0 }, this.app.settings.smoothing),
+          pinkyTip: this.smoothPoint(`pinky-${index}`, { x: pinkyTip.x, y: pinkyTip.y, z: pinkyTip.z || 0 }, this.app.settings.smoothing)
+        };
+      }
+
+      detectSwipe(index, palm, ts) {
+        const hist = this.history[index] || (this.history[index] = []);
+        hist.push({ x: palm.x, y: palm.y, ts });
+        while (hist.length > 8) hist.shift();
+        if (hist.length < 4 || ts - this.lastSwipeTs < 600) return null;
+        const first = hist[0], last = hist.at(-1);
+        const dx = last.x - first.x, dy = last.y - first.y;
+        const dt = Math.max(1, last.ts - first.ts);
+        const vx = dx / dt * 1000, vy = dy / dt * 1000;
+        const distance = Math.hypot(dx, dy);
+        if (distance < 0.14) return null;
+        if (Math.abs(dx) > Math.abs(dy) * 1.35) {
+          this.lastSwipeTs = ts;
+          return dx > 0 ? "SWIPE_RIGHT" : "SWIPE_LEFT";
+        }
+        if (Math.abs(dy) > Math.abs(dx) * 1.35) {
+          this.lastSwipeTs = ts;
+          return dy < 0 ? "SWIPE_UP" : "SWIPE_DOWN";
+        }
+        return null;
+      }
+
+      analyze(results) {
+        const out = {
+          gestures: [],
+          cursor: this.cursor,
+          activeGesture: this.activeGesture,
+          confidence: this.confidence,
+          hands: [],
+          twoHand: null
+        };
+        const hands = results?.hand?.landmarks || [];
+        const handedness = results?.hand?.handedness || [];
+        hands.forEach((lm, i) => {
+          const label = handedness[i]?.[0]?.categoryName || handedness[i]?.[0]?.displayName || (i === 0 ? "Right" : "Left");
+          out.hands.push(this.detectHandGestures(lm, label, now(), i));
+        });
+        if (out.hands.length >= 1) {
+          out.gestures.push(out.hands[0].gesture);
+          out.cursor = out.hands[0].indexTip;
+        }
+        if (out.hands.length >= 2) {
+          const a = out.hands[0], b = out.hands[1];
+          const center = { x: (a.palm.x + b.palm.x) / 2, y: (a.palm.y + b.palm.y) / 2 };
+          const distance = dist2(a.wrist, b.wrist);
+          const palmDist = dist2(a.palm, b.palm);
+          const angle = angle2(a.palm, b.palm);
+          out.twoHand = { center, distance, palmDist, angle };
+        }
+        const face = results?.face?.faceLandmarks?.[0];
+        return { ...out, face };
+      }
+    }
+
+    class AirDrawingEngine {
+      constructor(app) {
+        this.app = app;
+        this.isDrawing = false;
+        this.points = [];
+        this.lastSpawnTs = 0;
+        this.trailMesh = this.createTrail();
+        this.scene = app.sceneManager.scene;
+        this.scene.add(this.trailMesh);
+      }
+      createTrail() {
+        const geo = new THREE.BufferGeometry();
+        const positions = new Float32Array(3000 * 3);
+        geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        geo.setDrawRange(0, 0);
+        const mat = new THREE.PointsMaterial({ size: 0.045, color: 0x77dfff, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending });
+        const pts = new THREE.Points(geo, mat);
+        pts.frustumCulled = false;
+        return pts;
+      }
+      reset() {
+        this.isDrawing = false;
+        this.points = [];
+        this.trailMesh.geometry.setDrawRange(0, 0);
+      }
+      addPoint(p, ts) {
+        this.isDrawing = true;
+        this.points.push({ x: p.x, y: p.y, z: p.z || 0, ts });
+        if (this.points.length > 220) this.points.shift();
+        this.syncTrail();
+      }
+      syncTrail() {
+        const pos = this.trailMesh.geometry.attributes.position.array;
+        const arr = this.points;
+        for (let i = 0; i < arr.length; i++) {
+          const w = this.app.sceneManager.screenToWorld(arr[i].x, arr[i].y, 0.0);
+          pos[i * 3 + 0] = w.x;
+          pos[i * 3 + 1] = w.y;
+          pos[i * 3 + 2] = w.z;
+        }
+        this.trailMesh.geometry.attributes.position.needsUpdate = true;
+        this.trailMesh.geometry.setDrawRange(0, arr.length);
+      }
+      finish() {
+        if (!this.points.length) return null;
+        const shape = this.recognize(this.points);
+        const spawn = this.app.sceneManager.screenToWorld(this.points[0].x, this.points[0].y, 0.2);
+        this.points = [];
+        this.trailMesh.geometry.setDrawRange(0, 0);
+        return { shape, spawn };
+      }
+      recognize(points) {
+        const start = points[0], end = points.at(-1);
+        const path = points.map(p => ({ x: p.x, y: p.y }));
+        const bounds = path.reduce((b, p) => ({
+          minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x),
+          minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y)
+        }), { minX: 1, maxX: 0, minY: 1, maxY: 0 });
+        const w = bounds.maxX - bounds.minX, h = bounds.maxY - bounds.minY;
+        const diag = Math.hypot(w, h);
+        const closure = Math.hypot(end.x - start.x, end.y - start.y) / Math.max(0.001, diag);
+        const len = this.pathLength(path);
+        const compactness = len / Math.max(0.001, diag);
+        const radial = this.radialVariance(path);
+        const simplified = this.rdp(path, 0.028);
+        const k = simplified.length;
+
+        if (len > 0.5 && closure > 0.45 && radial < 0.11) return "CIRCLE";
+        if (k <= 3 && len > 0.25) return "LINE";
+        if (k === 4 && closure < 0.2 && Math.abs(w - h) / Math.max(w, h, 0.001) < 0.35) return "SQUARE";
+        if (k === 4 && closure < 0.2) return "RECTANGLE";
+        if (k === 3) return "TRIANGLE";
+        if (this.isZigzag(path)) return "ZIGZAG";
+        return "CUSTOM";
+      }
+      pathLength(path) {
+        let total = 0;
+        for (let i = 1; i < path.length; i++) total += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
+        return total;
+      }
+      radialVariance(path) {
+        const c = path.reduce((a,p) => ({ x: a.x + p.x / path.length, y: a.y + p.y / path.length }), { x:0, y:0 });
+        const d = path.map(p => Math.hypot(p.x - c.x, p.y - c.y));
+        const m = d.reduce((a,b)=>a+b,0)/Math.max(1,d.length);
+        return d.reduce((a,b)=>a+(b-m)*(b-m),0)/Math.max(1,d.length);
+      }
+      isZigzag(path) {
+        let turns = 0;
+        for (let i = 2; i < path.length; i++) {
+          const ax = path[i-1].x - path[i-2].x, ay = path[i-1].y - path[i-2].y;
+          const bx = path[i].x - path[i-1].x, by = path[i].y - path[i-1].y;
+          const cross = ax * by - ay * bx;
+          if (Math.abs(cross) > 0.0007) turns++;
+        }
+        return turns >= 4;
+      }
+      rdp(points, eps) {
+        if (points.length < 3) return points.slice();
+        const dmax = { value: 0, index: 0 };
+        const line = (p, a, b) => {
+          const l2 = (b.x-a.x)**2 + (b.y-a.y)**2 || 1e-9;
+          let t = ((p.x-a.x)*(b.x-a.x) + (p.y-a.y)*(b.y-a.y)) / l2;
+          t = clamp(t, 0, 1);
+          const x = a.x + t*(b.x-a.x), y = a.y + t*(b.y-a.y);
+          return Math.hypot(p.x-x, p.y-y);
+        };
+        for (let i = 1; i < points.length - 1; i++) {
+          const d = line(points[i], points[0], points.at(-1));
+          if (d > dmax.value) { dmax.value = d; dmax.index = i; }
+        }
+        if (dmax.value > eps) {
+          const l1 = this.rdp(points.slice(0, dmax.index + 1), eps);
+          const l2 = this.rdp(points.slice(dmax.index), eps);
+          return l1.slice(0, -1).concat(l2);
+        }
+        return [points[0], points.at(-1)];
+      }
+    }
+
+    class PhysicsEngine {
+      constructor() {
+        this.gravity = new THREE.Vector3(0, -1.4, 0);
+      }
+      update(objects, dt) {
+        for (const o of objects) {
+          if (!o.userData.physics) continue;
+          const p = o.userData.physics;
+          if (!p.held) {
+            p.velocity.addScaledVector(this.gravity, dt);
+            o.position.addScaledVector(p.velocity, dt);
+            o.rotation.x += p.angular.x * dt;
+            o.rotation.y += p.angular.y * dt;
+            o.rotation.z += p.angular.z * dt;
+            p.velocity.multiplyScalar(1 - clamp(p.friction, 0, 0.98) * dt);
+            if (o.position.y < p.floorY) {
+              o.position.y = p.floorY;
+              if (p.velocity.y < 0) p.velocity.y = -p.velocity.y * p.bounce;
+            }
+          }
+        }
+      }
+    }
+
+    class ParticleEngine {
+      constructor(scene, count = 1500) {
+        this.scene = scene;
+        this.count = count;
+        this.enabled = true;
+        this.geometry = new THREE.BufferGeometry();
+        this.positions = new Float32Array(count * 3);
+        this.velocities = new Float32Array(count * 3);
+        this.targets = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+          const i3 = i * 3;
+          this.positions[i3] = (Math.random() - 0.5) * 18;
+          this.positions[i3 + 1] = (Math.random() - 0.5) * 12;
+          this.positions[i3 + 2] = (Math.random() - 0.5) * 10;
+          this.targets[i3] = this.positions[i3];
+          this.targets[i3 + 1] = this.positions[i3 + 1];
+          this.targets[i3 + 2] = this.positions[i3 + 2];
+        }
+        this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3));
+        const mat = new THREE.PointsMaterial({
+          color: 0x76dcff,
+          size: 0.05,
+          transparent: true,
+          opacity: 0.9,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending
+        });
+        this.points = new THREE.Points(this.geometry, mat);
+        this.points.frustumCulled = false;
+        scene.add(this.points);
+      }
+      resize(count) {
+        this.scene.remove(this.points);
+        this.count = count;
+        this.geometry.dispose();
+        this.points.material.dispose();
+        this.geometry = new THREE.BufferGeometry();
+        this.positions = new Float32Array(count * 3);
+        this.velocities = new Float32Array(count * 3);
+        this.targets = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) {
+          const i3 = i * 3;
+          this.positions[i3] = (Math.random() - 0.5) * 18;
+          this.positions[i3 + 1] = (Math.random() - 0.5) * 12;
+          this.positions[i3 + 2] = (Math.random() - 0.5) * 10;
+        }
+        this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3));
+        const mat = new THREE.PointsMaterial({ color: 0x76dcff, size: 0.05, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending });
+        this.points = new THREE.Points(this.geometry, mat);
+        this.points.frustumCulled = false;
+        this.scene.add(this.points);
+      }
+      attract(world, strength = 0.8) {
+        if (!world) return;
+        this.targets.fill(0);
+        for (let i = 0; i < this.count; i++) {
+          const i3 = i * 3;
+          const dx = this.positions[i3] - world.x;
+          const dy = this.positions[i3 + 1] - world.y;
+          const dz = this.positions[i3 + 2] - world.z;
+          const d = Math.hypot(dx, dy, dz) + 0.001;
+          if (d < 3.5) {
+            this.velocities[i3] += (-dx / d) * strength * 0.012;
+            this.velocities[i3 + 1] += (-dy / d) * strength * 0.012;
+            this.velocities[i3 + 2] += (-dz / d) * strength * 0.012;
+          }
+        }
+      }
+      repulse(world, strength = 0.4) {
+        if (!world) return;
+        for (let i = 0; i < this.count; i++) {
+          const i3 = i * 3;
+          const dx = this.positions[i3] - world.x;
+          const dy = this.positions[i3 + 1] - world.y;
+          const dz = this.positions[i3 + 2] - world.z;
+          const d = Math.hypot(dx, dy, dz) + 0.001;
+          if (d < 4) {
+            this.velocities[i3] += (dx / d) * strength * 0.02;
+            this.velocities[i3 + 1] += (dy / d) * strength * 0.02;
+            this.velocities[i3 + 2] += (dz / d) * strength * 0.02;
+          }
+        }
+      }
+      update(dt, interactors = []) {
+        if (!this.enabled) return;
+        const p = this.positions, v = this.velocities;
+        for (let i = 0; i < this.count; i++) {
+          const i3 = i * 3;
+          p[i3] += v[i3] * dt * 60;
+          p[i3 + 1] += v[i3 + 1] * dt * 60;
+          p[i3 + 2] += v[i3 + 2] * dt * 60;
+          v[i3] *= 0.985;
+          v[i3 + 1] *= 0.985;
+          v[i3 + 2] *= 0.985;
+        }
+        for (const q of interactors) {
+          if (q.type === "attract") this.attract(q.pos, q.strength);
+          if (q.type === "repulse") this.repulse(q.pos, q.strength);
+        }
+        this.geometry.attributes.position.needsUpdate = true;
+      }
+    }
+
+    class ObjectManager {
+      constructor(app) {
+        this.app = app;
+        this.scene = app.sceneManager.scene;
+        this.objects = [];
+        this.selected = null;
+        this.hovered = null;
+        this.raycaster = new THREE.Raycaster();
+        this.pointer = new THREE.Vector2(0, 0);
+      }
+      createMaterial(color = 0x67d7ff, wireframe = false) {
+        return new THREE.MeshStandardMaterial({
+          color,
+          metalness: 0.15,
+          roughness: 0.2,
+          emissive: new THREE.Color(color).multiplyScalar(0.12),
+          wireframe
+        });
+      }
+      spawn(type, world, color) {
+        const geo = this.geometryFor(type);
+        const mat = this.createMaterial(color ?? this.randomColor(), false);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(world || new THREE.Vector3(0, 0, 0));
+        mesh.castShadow = mesh.receiveShadow = false;
+        mesh.userData = {
+          type,
+          name: type,
+          born: now(),
+          physics: {
+            velocity: new THREE.Vector3(),
+            angular: new THREE.Vector3((Math.random()-.5)*1.4, (Math.random()-.5)*1.4, (Math.random()-.5)*1.4),
+            friction: 0.22,
+            bounce: 0.46,
+            floorY: -2.8,
+            held: false
+          }
+        };
+        this.scene.add(mesh);
+        this.objects.push(mesh);
+        this.select(mesh);
+        mesh.scale.setScalar(type === "Crystal" ? 0.8 : 1);
+        mesh.rotation.set(Math.random(), Math.random(), Math.random());
+        return mesh;
+      }
+      geometryFor(type) {
+        switch ((type || "").toLowerCase()) {
+          case "sphere": return new THREE.SphereGeometry(0.6, 32, 20);
+          case "triangle": return new THREE.CylinderGeometry(0, 0.65, 1.15, 3);
+          case "pyramid": return new THREE.ConeGeometry(0.72, 1.2, 4);
+          case "cone": return new THREE.ConeGeometry(0.6, 1.25, 28);
+          case "cylinder": return new THREE.CylinderGeometry(0.55, 0.55, 1.2, 28);
+          case "torus": return new THREE.TorusGeometry(0.54, 0.2, 16, 48);
+          case "icosahedron": return new THREE.IcosahedronGeometry(0.72, 0);
+          case "crystal": return new THREE.DodecahedronGeometry(0.7, 0);
+          case "wireframe cube": return new THREE.BoxGeometry(1.2, 1.2, 1.2);
+          case "beam": return new THREE.BoxGeometry(1.2, 0.12, 0.12);
+          default: return new THREE.BoxGeometry(1,1,1);
+        }
+      }
+      randomColor() {
+        const colors = [0x67d7ff, 0x9a7dff, 0x49f7b7, 0xffffff, 0x8fd8ff, 0xb5a0ff];
+        return colors[(Math.random() * colors.length) | 0];
+      }
+      select(mesh) {
+        if (this.selected && this.selected.material?.emissive) this.selected.material.emissiveIntensity = 0.12;
+        this.selected = mesh || null;
+        if (this.selected && this.selected.material?.emissive) this.selected.material.emissiveIntensity = 0.7;
+      }
+      deselect() { this.select(null); }
+      remove(mesh = this.selected) {
+        if (!mesh) return;
+        this.scene.remove(mesh);
+        mesh.geometry?.dispose?.();
+        mesh.material?.dispose?.();
+        this.objects = this.objects.filter(o => o !== mesh);
+        if (this.selected === mesh) this.selected = null;
+      }
+      duplicate(mesh = this.selected) {
+        if (!mesh) return null;
+        const clone = mesh.clone();
+        clone.geometry = mesh.geometry.clone();
+        clone.material = mesh.material.clone();
+        clone.position.add(new THREE.Vector3(0.35, 0.25, 0.0));
+        clone.userData = structuredCloneSafe(mesh.userData);
+        clone.userData.born = now();
+        this.scene.add(clone);
+        this.objects.push(clone);
+        this.select(clone);
+        return clone;
+      }
+      toggleWireframe(mesh = this.selected) {
+        if (!mesh?.material) return;
+        mesh.material = mesh.material.clone();
+        mesh.material.wireframe = !mesh.material.wireframe;
+        mesh.material.needsUpdate = true;
+      }
+      setColor(mesh, color) {
+        if (!mesh?.material) return;
+        mesh.material.color.set(color);
+        mesh.material.emissive.set(color);
+      }
+      get hoveredLabel() { return this.hovered?.userData?.name || ""; }
+      updatePointerFromNDC(x, y) {
+        this.pointer.set(x, y);
+        this.raycaster.setFromCamera(this.pointer, this.app.sceneManager.camera);
+        const hits = this.raycaster.intersectObjects(this.objects, false);
+        this.hovered = hits[0]?.object || null;
+        return this.hovered;
+      }
+      updateSelectionHighlight() {
+        for (const o of this.objects) {
+          if (!o.material?.emissive) continue;
+          o.material.emissiveIntensity = (o === this.selected) ? 0.7 : (o === this.hovered ? 0.35 : 0.12);
+        }
+      }
+    }
+
+    function structuredCloneSafe(v) {
+      try { return structuredClone(v); } catch { return JSON.parse(JSON.stringify(v)); }
+    }
+
+    class FourDEngine {
+      constructor(app) {
+        this.app = app;
+        this.group = new THREE.Group();
+        this.group.visible = true;
+        this.vertices = [];
+        this.edges = [];
+        this.rotation = { xy: 0.15, xz: 0.22, yz: 0.11, xw: 0.0, yw: 0.35, zw: 0.18 };
+        this.scale = 1.0;
+        this.depth = 2.2;
+        this.active = true;
+        this.line = null;
+        this.verticesMesh = null;
+        this.build();
+        app.sceneManager.scene.add(this.group);
+      }
+      build() {
+        this.vertices = [];
+        for (let i = 0; i < 16; i++) {
+          this.vertices.push([
+            (i & 1 ? 1 : -1),
+            (i & 2 ? 1 : -1),
+            (i & 4 ? 1 : -1),
+            (i & 8 ? 1 : -1),
+          ]);
+        }
+        this.edges = [];
+        for (let i = 0; i < 16; i++) for (let j = i + 1; j < 16; j++) {
+          const diff = ((i ^ j).toString(2).match(/1/g) || []).length;
+          if (diff === 1) this.edges.push([i, j]);
+        }
+        const lineGeo = new THREE.BufferGeometry();
+        lineGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(this.edges.length * 2 * 3), 3));
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x8fd8ff, transparent: true, opacity: 0.92 });
+        this.line = new THREE.LineSegments(lineGeo, lineMat);
+        this.group.add(this.line);
+        const sphereGeo = new THREE.SphereGeometry(0.05, 10, 10);
+        const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        this.verticesMesh = new THREE.InstancedMesh(sphereGeo, sphereMat, 16);
+        this.group.add(this.verticesMesh);
+      }
+      rotatePlane(a, b, angle) {
+        for (const v of this.vertices) {
+          const x = v[a], y = v[b];
+          v[a] = x * Math.cos(angle) - y * Math.sin(angle);
+          v[b] = x * Math.sin(angle) + y * Math.cos(angle);
+        }
+      }
+      projectVertex(v4) {
+        let [x, y, z, w] = v4;
+        const rot = this.rotation;
+        const apply = (a, b, ang) => {
+          const ca = Math.cos(ang), sa = Math.sin(ang);
+          const x0 = a, y0 = b;
+          return [x0 * ca - y0 * sa, x0 * sa + y0 * ca];
+        };
+        [x, y] = apply(x, y, rot.xy);
+        [x, z] = apply(x, z, rot.xz);
+        [y, z] = apply(y, z, rot.yz);
+        [x, w] = apply(x, w, rot.xw);
+        [y, w] = apply(y, w, rot.yw);
+        [z, w] = apply(z, w, rot.zw);
+        const d4 = this.depth;
+        const p4 = d4 / (d4 - w);
+        return new THREE.Vector3(x * p4, y * p4, z * p4);
+      }
+      update(dt, gestureState) {
+        const speed = (gestureState?.twoHand?.distance || 0) * 0.00035 + 0.3;
+        this.rotation.xy += 0.2 * dt * speed;
+        this.rotation.xz += 0.12 * dt * speed;
+        if (gestureState?.gesture === "PINCH_HOLD" || gestureState?.gesture === "PINCH") {
+          this.scale = lerp(this.scale, 0.85 + clamp(1 - gestureState.confidence, 0, 0.25), 0.12);
+        }
+        if (gestureState?.twoHand) {
+          const d = gestureState.twoHand.distance;
+          this.depth = lerp(this.depth, clamp(2.0 + (0.45 - d) * 3.0, 1.0, 5.0), 0.08);
+          this.rotation.xw += gestureState.twoHand.angle * 0.0012;
+          this.rotation.yw += gestureState.twoHand.angle * 0.0009;
+          this.rotation.zw += gestureState.twoHand.angle * 0.0007;
+        }
+        const pos = this.line.geometry.attributes.position.array;
+        const inst = new THREE.Matrix4();
+        const tmp = new THREE.Object3D();
+        const pts = this.vertices.map(v => this.projectVertex(v).multiplyScalar(this.scale));
+        for (let i = 0; i < this.edges.length; i++) {
+          const [a, b] = this.edges[i];
+          pos[i * 6 + 0] = pts[a].x;
+          pos[i * 6 + 1] = pts[a].y;
+          pos[i * 6 + 2] = pts[a].z;
+          pos[i * 6 + 3] = pts[b].x;
+          pos[i * 6 + 4] = pts[b].y;
+          pos[i * 6 + 5] = pts[b].z;
+        }
+        this.line.geometry.attributes.position.needsUpdate = true;
+        for (let i = 0; i < 16; i++) {
+          tmp.position.copy(pts[i]);
+          tmp.scale.setScalar(1.0);
+          tmp.updateMatrix();
+          this.verticesMesh.setMatrixAt(i, tmp.matrix);
+        }
+        this.verticesMesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+
+    class SceneManager {
+      constructor(app) {
+        this.app = app;
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+        this.camera.position.set(0, 0.3, 6);
+        this.renderer = null;
+        this.webglCanvas = $("webgl");
+        this.fxCanvas = $("fxCanvas");
+        this.ctx = this.fxCanvas.getContext("2d");
+        this.clock = new THREE.Clock();
+        this.scene.background = null;
+        this.pickPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        this.tempVec = new THREE.Vector3();
+        this.tempVec2 = new THREE.Vector3();
+        this.init();
+      }
+      init() {
+        this.renderer = new THREE.WebGLRenderer({ canvas: this.webglCanvas, alpha: true, antialias: true, powerPreference: "high-performance" });
+        this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        this.renderer.setSize(innerWidth, innerHeight, false);
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        this.renderer.shadowMap.enabled = false;
+        $("hudRenderer").textContent = "WEBGL2";
+        this.onResize();
+        window.addEventListener("resize", () => this.onResize());
+        this.addLights();
+      }
+      addLights() {
+        const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+        const key = new THREE.DirectionalLight(0x8fd8ff, 2.2);
+        key.position.set(3, 4, 6);
+        const rim = new THREE.DirectionalLight(0x9a7dff, 1.4);
+        rim.position.set(-4, 1, -3);
+        this.scene.add(ambient, key, rim);
+      }
+      onResize() {
+        const w = innerWidth, h = innerHeight;
+        this.camera.aspect = w / h;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(w, h, false);
+        this.fxCanvas.width = Math.max(1, Math.floor(w * devicePixelRatio));
+        this.fxCanvas.height = Math.max(1, Math.floor(h * devicePixelRatio));
+        this.fxCanvas.style.width = w + "px";
+        this.fxCanvas.style.height = h + "px";
+      }
+      screenToWorld(x, y, z = 0) {
+        const ndc = new THREE.Vector3(x * 2 - 1, -(y * 2 - 1), z);
+        ndc.unproject(this.camera);
+        const dir = ndc.sub(this.camera.position).normalize();
+        const distance = (z - this.camera.position.z) / dir.z;
+        return this.camera.position.clone().add(dir.multiplyScalar(distance || 0));
+      }
+      updateBackgroundOverlay(state) {
+        const ctx = this.ctx;
+        const w = this.fxCanvas.width, h = this.fxCanvas.height;
+        ctx.clearRect(0, 0, w, h);
+        const g = ctx.createLinearGradient(0, 0, w, h);
+        g.addColorStop(0, "rgba(103,215,255,0.05)");
+        g.addColorStop(.5, "rgba(154,125,255,0.03)");
+        g.addColorStop(1, "rgba(73,247,183,0.02)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "rgba(111,219,255,0.11)";
+        ctx.lineWidth = 1 * devicePixelRatio;
+        const step = Math.max(52, Math.floor(Math.min(w, h) / 16));
+        for (let x = 0; x < w; x += step) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (let y = 0; y < h; y += step) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+        if (state?.face) this.drawFaceOverlay(ctx, state.face);
+      }
+      drawFaceOverlay(ctx, face) {
+        const pts = face;
+        const w = this.fxCanvas.width, h = this.fxCanvas.height;
+        const mirrored = this.app.camera.mirror;
+        const map = (p) => ({ x: (mirrored ? 1 - p.x : p.x) * w, y: p.y * h, z: p.z });
+        const outline = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323];
+        ctx.save();
+        ctx.shadowColor = "rgba(103,215,255,0.6)";
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = "rgba(103,215,255,0.28)";
+        ctx.fillStyle = "rgba(103,215,255,0.8)";
+        ctx.lineWidth = 1.5 * devicePixelRatio;
+        ctx.beginPath();
+        outline.forEach((id, i) => {
+          const p = map(pts[id]);
+          if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        });
+        ctx.closePath();
+        ctx.stroke();
+        const eyes = [33, 263, 1, 13];
+        eyes.forEach(id => {
+          const p = map(pts[id]);
+          ctx.beginPath(); ctx.arc(p.x, p.y, 2.2 * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
+        });
+        const nose = map(pts[1]);
+        ctx.fillStyle = "rgba(154,125,255,0.85)";
+        ctx.beginPath(); ctx.arc(nose.x, nose.y, 2.5 * devicePixelRatio, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      render() {
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    class HUDManager {
+      constructor(app) { this.app = app; }
+      update(state, dt) {
+        $("hudCamera").textContent = this.app.camera.isActive ? "CONNECTED" : "DISCONNECTED";
+        $("hudVision").textContent = this.app.vision.loaded ? "ACTIVE" : "LOADING";
+        $("hudHands").textContent = String(this.app.vision.handCount);
+        $("hudFace").textContent = this.app.vision.faceCount ? "DETECTED" : "NONE";
+        $("hudGesture").textContent = state?.activeGesture || "—";
+        $("hudConfidence").textContent = `${Math.round((state?.confidence || 0) * 100)}%`;
+        $("hudFps").textContent = `${Math.round(this.app.perf.fps || 0)}`;
+        $("hudTracking").textContent = this.app.trackingStable ? "STABLE" : "SEARCHING";
+        $("debugInfo").innerHTML = [
+          `Camera: ${this.app.camera.size.width}×${this.app.camera.size.height}`,
+          `FPS: ${toFixed(this.app.perf.fps, 1)}`,
+          `Inference: ${toFixed(this.app.perf.inferenceMs, 1)} ms`,
+          `Render: ${toFixed(this.app.perf.renderMs, 1)} ms`,
+          `Hand model: ${this.app.vision.loaded ? "ready" : "loading"}`,
+          `WebGPU: ${navigator.gpu ? "available" : "not available"}`,
+          `Mirror: ${this.app.camera.mirror ? "on" : "off"}`,
+          `Selected: ${this.app.objects.selected?.userData?.name || "none"}`,
+          `Hover: ${this.app.objects.hoveredLabel || "none"}`
+        ].map(t => `• ${t}`).join("<br>");
+        $("sysHand").textContent = this.app.settings.enableHands ? "ON" : "OFF";
+        $("sysFace").textContent = this.app.settings.enableFace ? "ON" : "OFF";
+        $("sysSmooth").textContent = this.app.settings.smoothing.toFixed(2);
+        $("sysSensitivity").textContent = this.app.settings.gestureThreshold.toFixed(2);
+        $("smoothValue").textContent = this.app.settings.smoothing.toFixed(2);
+        $("thresholdValue").textContent = this.app.settings.gestureThreshold.toFixed(2);
+        $("particleValue").textContent = String(this.app.settings.particleCount);
+        $("resolutionLabel").textContent = $("resolutionSelect").value;
+        $("fpsLabel").textContent = $("fpsSelect").value;
+        $("loadingDetail").textContent = this.app.loadingDetail;
+      }
+    }
+
+    class SettingsManager {
+      constructor(app) {
+        this.app = app;
+        const saved = StorageManager.load();
+        this.state = {
+          enableHands: saved.enableHands ?? true,
+          enableFace: saved.enableFace ?? true,
+          smoothing: saved.smoothing ?? 0.68,
+          gestureThreshold: saved.gestureThreshold ?? 0.5,
+          particleCount: saved.particleCount ?? 1500,
+          bloom: saved.bloom ?? true,
+          particles: saved.particles ?? true,
+          mirror: saved.mirror ?? true,
+          perfMode: saved.perfMode ?? false,
+          debug: saved.debug ?? true
+        };
+      }
+      bind() {
+        $("smoothRange").value = this.state.smoothing;
+        $("thresholdRange").value = this.state.gestureThreshold;
+        $("particleRange").value = this.state.particleCount;
+        $("mirrorToggle").checked = this.state.mirror;
+        $("perfToggle").checked = this.state.perfMode;
+        $("toggleHandsBtn").textContent = this.state.enableHands ? "Hands: ON" : "Hands: OFF";
+        $("toggleFaceBtn").textContent = this.state.enableFace ? "Face: ON" : "Face: OFF";
+        $("toggleParticlesBtn").textContent = this.state.particles ? "Particles: ON" : "Particles: OFF";
+        $("toggleBloomBtn").textContent = this.state.bloom ? "Glow: ON" : "Glow: OFF";
+
+        $("smoothRange").addEventListener("input", e => {
+          this.state.smoothing = Number(e.target.value);
+          StorageManager.save(this.state);
+        });
+        $("thresholdRange").addEventListener("input", e => {
+          this.state.gestureThreshold = Number(e.target.value);
+          StorageManager.save(this.state);
+        });
+        $("particleRange").addEventListener("input", e => {
+          this.state.particleCount = Number(e.target.value);
+          this.app.applyParticleCount(this.state.particleCount);
+          StorageManager.save(this.state);
+        });
+        $("mirrorToggle").addEventListener("change", e => {
+          this.state.mirror = e.target.checked;
+          this.app.camera.mirror = this.state.mirror;
+        applyMirrorTransform(this.state.mirror);
+          applyMirrorTransform(this.state.mirror);
+          StorageManager.save(this.state);
+        });
+        $("perfToggle").addEventListener("change", e => {
+          this.state.perfMode = e.target.checked;
+          this.app.perf.lowPower = this.state.perfMode;
+          this.app.visionThrottle = this.state.perfMode ? 120 : 55;
+          StorageManager.save(this.state);
+        });
+        $("toggleHandsBtn").addEventListener("click", () => {
+          this.state.enableHands = !this.state.enableHands;
+          $("toggleHandsBtn").textContent = this.state.enableHands ? "Hands: ON" : "Hands: OFF";
+          StorageManager.save(this.state);
+        });
+        $("toggleFaceBtn").addEventListener("click", () => {
+          this.state.enableFace = !this.state.enableFace;
+          $("toggleFaceBtn").textContent = this.state.enableFace ? "Face: ON" : "Face: OFF";
+          StorageManager.save(this.state);
+        });
+        $("toggleParticlesBtn").addEventListener("click", () => {
+          this.state.particles = !this.state.particles;
+          $("toggleParticlesBtn").textContent = this.state.particles ? "Particles: ON" : "Particles: OFF";
+          this.app.particles.enabled = this.state.particles;
+          StorageManager.save(this.state);
+        });
+        $("toggleBloomBtn").addEventListener("click", () => {
+          this.state.bloom = !this.state.bloom;
+          $("toggleBloomBtn").textContent = this.state.bloom ? "Glow: ON" : "Glow: OFF";
+          this.app.sceneManager.renderer.toneMappingExposure = this.state.bloom ? 1.25 : 0.95;
+          StorageManager.save(this.state);
+        });
+        this.app.applyParticleCount(this.state.particleCount);
+        this.app.camera.mirror = this.state.mirror;
+        this.app.perf.lowPower = this.state.perfMode;
+      }
+    }
+
+    class InteractionManager {
+      constructor(app) {
+        this.app = app;
+        this.lastSpawn = 0;
+      }
+      update(state) {
+        const app = this.app;
+        const cursor = state?.cursor || { x: 0.5, y: 0.5, z: 0 };
+        const mirrored = app.camera.mirror;
+        const x = mirrored ? 1 - cursor.x : cursor.x;
+        const y = cursor.y;
+        const ndc = new THREE.Vector2(x * 2 - 1, -(y * 2 - 1));
+        app.objects.updatePointerFromNDC(ndc.x, ndc.y);
+        app.objects.updateSelectionHighlight();
+
+        const world = app.sceneManager.screenToWorld(x, y, 0.1);
+        const fingerTrail = $("fingerTrail");
+        fingerTrail.style.opacity = state?.hands?.length ? "1" : "0";
+        fingerTrail.style.left = `${x * 100}%`;
+        fingerTrail.style.top = `${y * 100}%`;
+
+        if (state?.hands?.[0]) {
+          app.particles.enabled && app.particles.attract(world, state.gesture === "PINCH_HOLD" ? 1.7 : 0.35);
+        }
+        if (state?.gesture === "OPEN_PALM") app.particles.repulse(world, 0.8);
+
+        const selected = app.objects.selected;
+        const hovered = app.objects.hovered;
+        if (state?.gesture === "PINCH" && hovered) app.objects.select(hovered);
+        if (state?.gesture === "PINCH_HOLD" && selected) {
+          selected.userData.physics.held = true;
+          selected.position.lerp(world, 0.34);
+        }
+        if (state?.gesture === "PINCH_MOVE" && selected) {
+          selected.position.lerp(world, 0.32);
+        }
+        if (state?.gesture === "PINCH_RELEASE" && selected) {
+          selected.userData.physics.held = false;
+          selected.userData.physics.velocity.set((state.cursor.vx || 0) * 0.01, (state.cursor.vy || 0) * 0.01, 0);
+        }
+
+        if (state?.gesture === "POINT" && app.airDrawing.isDrawing) {
+          app.airDrawing.addPoint(cursor, now());
+        }
+
+        if (state?.gesture === "OPEN_PALM") {
+          if (app.airDrawing.isDrawing && app.airDrawing.points.length > 16) {
+            const outcome = app.airDrawing.finish();
+            if (outcome) this.spawnFromShape(outcome);
+          } else {
+            app.airDrawing.reset();
+          }
+        }
+
+        if (state?.gesture === "SWIPE_LEFT") app.switchMode(-1);
+        if (state?.gesture === "SWIPE_RIGHT") app.switchMode(1);
+        if (state?.gesture === "SWIPE_UP") app.sceneManager.camera.position.z = clamp(app.sceneManager.camera.position.z - 0.35, 3.2, 10);
+        if (state?.gesture === "SWIPE_DOWN") app.sceneManager.camera.position.z = clamp(app.sceneManager.camera.position.z + 0.35, 3.2, 10);
+
+        if (state?.gesture === "THUMBS_UP") {
+          if (selected) app.objects.setColor(selected, 0x49f7b7);
+        }
+        if (state?.gesture === "FIST" && selected) {
+          selected.userData.physics.held = true;
+        }
+
+        if (state?.twoHand && selected) {
+          const scale = clamp(1 + (state.twoHand.distance - 0.25) * 1.6, 0.35, 2.8);
+          selected.scale.lerp(new THREE.Vector3(scale, scale, scale), 0.2);
+          selected.rotation.y += state.twoHand.angle * 0.0025;
+        }
+
+        if (state?.face && app.faceAnchor) {
+          const f = state.face;
+          const eyeL = f[33], eyeR = f[263], nose = f[1], mouth = f[13];
+          const faceCenter = {
+            x: (eyeL.x + eyeR.x + nose.x + mouth.x) / 4,
+            y: (eyeL.y + eyeR.y + nose.y + mouth.y) / 4
+          };
+          const fx = mirrored ? 1 - faceCenter.x : faceCenter.x;
+          const faceWorld = app.sceneManager.screenToWorld(fx, faceCenter.y, 0.45);
+          app.faceAnchor.position.lerp(faceWorld, 0.15);
+          app.faceAnchor.visible = true;
+          const yaw = (eyeR.x - eyeL.x) * 2.5;
+          const pitch = (mouth.y - nose.y) * 1.4;
+          app.faceAnchor.rotation.set(pitch, -yaw, 0);
+        } else if (app.faceAnchor) {
+          app.faceAnchor.visible = false;
+        }
+
+        if (state?.twoHand && !selected && state.gesture === "OPEN_PALM") {
+          app.fourD.scale = lerp(app.fourD.scale, 1 + (0.45 - state.twoHand.distance) * 1.2, 0.08);
+        }
+      }
+      spawnFromShape(outcome) {
+        const { shape, spawn } = outcome;
+        const map = {
+          CIRCLE: "sphere",
+          TRIANGLE: "triangle",
+          SQUARE: "wireframe cube",
+          RECTANGLE: "cube",
+          LINE: "beam",
+          ZIGZAG: "torus",
+          CUSTOM: "crystal"
+        };
+        const type = map[shape] || "cube";
+        const obj = this.app.objects.spawn(type, spawn);
+        if (shape === "SQUARE") obj.scale.setScalar(0.9);
+        if (shape === "LINE") obj.scale.set(1.4, 0.18, 0.18);
+      }
+    }
+
+    class Application {
+      constructor() {
+        this.settings = null;
+        this.camera = null;
+        this.vision = null;
+        this.sceneManager = null;
+        this.hud = null;
+        this.error = new ErrorManager(this);
+        this.perf = new PerformanceManager();
+        this.loading = false;
+        this.loadingDetail = "Starting.";
+        this.startupStages = [];
+        this.visionThrottle = 55;
+        this.lastInference = 0;
+        this.running = false;
+        this.trackingStable = false;
+        this.faceAnchor = null;
+        this.activeMode = 0;
+      }
+      async init() {
+        this.settings = new SettingsManager(this);
+        this.camera = new CameraManager(this);
+        this.vision = new VisionManager(this);
+        this.sceneManager = new SceneManager(this);
+        this.hud = new HUDManager(this);
+        this.objects = new ObjectManager(this);
+        this.physics = new PhysicsEngine();
+        this.particles = new ParticleEngine(this.sceneManager.scene, this.settings.state.particleCount);
+        this.fourD = new FourDEngine(this);
+        this.airDrawing = new AirDrawingEngine(this);
+        this.interaction = new InteractionManager(this);
+        this.gesture = new GestureEngine(this);
+        this.faceAnchor = this.buildFaceAnchor();
+        this.sceneManager.scene.add(this.faceAnchor);
+        this.settings.bind();
+        this.bindUI();
+        this.setStartupStages(["BOOTING AI VISION SYSTEM...", "CHECKING BROWSER...", "CHECKING CAMERA...", "LOADING VISION MODELS...", "INITIALIZING HAND TRACKING...", "INITIALIZING FACE TRACKING...", "INITIALIZING 3D ENGINE...", "INITIALIZING 4D ENGINE...", "CALIBRATING...", "SYSTEM READY"]);
+        this.setLoading(false);
+        this.updateStartupProgress(0);
+        this.sceneManager.scene.add(this.createBackgroundGrid());
+        await this.preflight();
+      }
+      createBackgroundGrid() {
+        const group = new THREE.Group();
+        const geo = new THREE.BufferGeometry();
+        const pts = [];
+        for (let i = -12; i <= 12; i++) {
+          pts.push(-12, i, -6, 12, i, -6);
+          pts.push(i, -12, -6, i, 12, -6);
+        }
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+        const mat = new THREE.LineBasicMaterial({ color: 0x2e6f8c, transparent: true, opacity: 0.16 });
+        const lines = new THREE.LineSegments(geo, mat);
+        group.add(lines);
+        return group;
+      }
+      buildFaceAnchor() {
+        const group = new THREE.Group();
+        const geo = new THREE.SphereGeometry(0.06, 10, 10);
+        const mat = new THREE.MeshBasicMaterial({ color: 0x67d7ff });
+        const sphere = new THREE.Mesh(geo, mat);
+        group.add(sphere);
+        group.visible = false;
+        return group;
+      }
+      bindUI() {
+        $("enableCameraBtn").addEventListener("click", () => this.start());
+        $("stopCameraBtn").addEventListener("click", () => this.stop());
+        $("reconnectBtn").addEventListener("click", () => this.reconnect());
+        $("errorRetryBtn").addEventListener("click", () => this.reconnect());
+        $("errorHelpBtn").addEventListener("click", () => this.openCameraHelp());
+        $("errorDismissBtn").addEventListener("click", () => this.error.hide());
+        $("resetSceneBtn").addEventListener("click", () => this.resetScene());
+        $("toggle4DBtn").addEventListener("click", () => { this.fourD.active = !this.fourD.active; this.fourD.group.visible = this.fourD.active; });
+        $("spawnCubeBtn").addEventListener("click", () => this.objects.spawn("cube", new THREE.Vector3(0,0,0)));
+        $("spawnSphereBtn").addEventListener("click", () => this.objects.spawn("sphere", new THREE.Vector3(0.4,0.1,0)));
+        $("spawnTriBtn").addEventListener("click", () => this.objects.spawn("triangle", new THREE.Vector3(-0.4,0.1,0)));
+        $("spawnPyrBtn").addEventListener("click", () => this.objects.spawn("pyramid", new THREE.Vector3(0.2,0.1,0)));
+        $("spawnConeBtn").addEventListener("click", () => this.objects.spawn("cone", new THREE.Vector3(-0.2,0.1,0)));
+        $("spawnTorusBtn").addEventListener("click", () => this.objects.spawn("torus", new THREE.Vector3(0.0,0.1,0)));
+        $("spawnIcosaBtn").addEventListener("click", () => this.objects.spawn("icosahedron", new THREE.Vector3(0.0,0.1,0)));
+        $("spawnCrystalBtn").addEventListener("click", () => this.objects.spawn("crystal", new THREE.Vector3(0.0,0.1,0)));
+
+        $("cameraSelect").addEventListener("change", e => {
+          this.camera.deviceId = e.target.value;
+          localStorage.setItem("aiVision4D.cameraId", this.camera.deviceId);
+        });
+        $("resolutionSelect").addEventListener("change", () => StorageManager.save(this.settings.state));
+        $("fpsSelect").addEventListener("change", () => StorageManager.save(this.settings.state));
+
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Delete") this.objects.remove();
+          if (e.key.toLowerCase() === "d") this.objects.duplicate();
+          if (e.key.toLowerCase() === "w") this.objects.toggleWireframe();
+          if (e.key.toLowerCase() === "p") this.togglePaused();
+          if (e.key === "ArrowLeft") this.switchMode(-1);
+          if (e.key === "ArrowRight") this.switchMode(1);
+        });
+      }
+      setStatus(state) {
+        $("hudCamera").textContent = state;
+      }
+      setLoading(on) {
+        $("welcomeScreen").classList.toggle("hidden", on);
+        $("loadingScreen").classList.toggle("hidden", !on);
+        this.loading = on;
+      }
+      setStartupStages(stages) {
+        this.startupStages = stages;
+        const list = $("startupStages");
+        const list2 = $("loadingStages");
+        list.innerHTML = stages.map((s, i) => `<div id="stage-${i}">${s}</div>`).join("");
+        list2.innerHTML = stages.map((s, i) => `<div id="load-${i}">${s}</div>`).join("");
+      }
+      updateStartupProgress(index) {
+        const items = this.startupStages.map((s, i) => {
+          const active = i <= index ? "active" : "";
+          return `<div class="${active}">${i <= index ? "✓" : "•"} ${s}</div>`;
+        }).join("");
+        $("startupStages").innerHTML = items;
+        $("loadingStages").innerHTML = items;
+      }
+      async preflight() {
+        try {
+          $("loadingDetail").textContent = "Checking browser support.";
+          await this.camera.ensureSecureContext();
+          this.setLoading(true);
+          this.updateStartupProgress(1);
+          this.loadingDetail = "Camera security check passed.";
+          this.hud.update({}, 0);
+          this.updateStartupProgress(2);
+
+          $("loadingDetail").textContent = "Requesting camera access.";
+          await this.ensureCamera();
+          this.updateStartupProgress(3);
+
+          $("loadingDetail").textContent = "Loading vision models.";
+          await this.vision.initialize();
+          this.updateStartupProgress(4);
+          this.updateStartupProgress(5);
+
+          this.faceAnchor.visible = false;
+          this.updateStartupProgress(6);
+          this.updateStartupProgress(7);
+          this.updateStartupProgress(8);
+          this.updateStartupProgress(9);
+
+          this.setLoading(false);
+          $("welcomeScreen").classList.add("hidden");
+          this.running = true;
+          this.loadingDetail = "System ready.";
+          this.loop();
+        } catch (e) {
+          if (e?.name === "NotAllowedError" || /denied/i.test(e?.message || "")) {
+            this.error.show("Camera access was denied.", "Chrome blocked camera access. Use RETRY after allowing the permission, or open Site Settings in the address bar and enable the camera for this site.");
+          } else if (e?.name === "NotFoundError") {
+            this.error.show("No camera was detected.", "No camera was detected on this device.");
+          } else if (e?.name === "NotReadableError" || e?.name === "AbortError") {
+            this.error.show("Camera busy.", "Your camera may be in use by another application.");
+          } else if (e?.name === "SecurityError") {
+            this.error.show("Camera access requires HTTPS or localhost.", "This page must be opened over HTTPS or localhost before camera access can work.");
+          } else {
+            this.error.show("Unknown camera or initialization error.", `${e?.name || "Error"}: ${e?.message || String(e)}`);
+          }
+          this.running = false;
+        } finally {
+          this.hud.update({}, 0);
+        }
+      }
+      async ensureCamera() {
+        await this.camera.start();
+        this.loadingDetail = "Camera connected.";
+        await this.camera.refreshDevices();
+      }
+      async start() {
+        this.error.hide();
+        $("welcomeScreen").classList.add("hidden");
+        this.setLoading(true);
+        this.loadingDetail = "Starting.";
+        if (!this.sceneManager) await this.init();
+        await this.ensureCamera();
+        if (!this.vision.loaded) {
+          this.loadingDetail = "Loading vision models.";
+          await this.vision.initialize();
+        }
+        this.setLoading(false);
+        $("welcomeScreen").classList.add("hidden");
+        this.running = true;
+        if (!this.looping) this.loop();
+      }
+      async reconnect() {
+        this.stop();
+        await this.start().catch(err => this.error.handle(err));
+      }
+      stop() {
+        this.running = false;
+        this.looping = false;
+        this.camera?.stop();
+        this.airDrawing?.reset();
+        this.vision.lastHandResult = null;
+        this.vision.lastFaceResult = null;
+        $("hudCamera").textContent = "DISCONNECTED";
+        $("hudVision").textContent = "IDLE";
+        $("hudHands").textContent = "0";
+        $("hudFace").textContent = "NONE";
+        $("hudGesture").textContent = "—";
+        this.loadingDetail = "Camera stopped.";
+      }
+      togglePaused() { this.running = !this.running; }
+      resetScene() {
+        for (const obj of [...this.objects.objects]) this.objects.remove(obj);
+        this.objects.deselect();
+      }
+      switchMode(dir) {
+        this.activeMode = (this.activeMode + dir + 4) % 4;
+        const modes = ["OBJECTS", "4D", "DRAWING", "DEBUG"];
+        $("hudGesture").textContent = modes[this.activeMode];
+        if (this.activeMode === 1) this.fourD.group.visible = true;
+      }
+      openCameraHelp() {
+        this.error.show(
+          "Camera help",
+          "In Chrome, click the lock icon or the camera icon in the address bar, then allow camera access for this site. On Android, check Chrome site permissions and system app permissions too."
+        );
+      }
+      applyParticleCount(count) {
+        if (this.particles) this.particles.resize(count);
+      }
+      async loop() {
+        this.looping = true;
+        let lastTs = now();
+        const draw = async (ts) => {
+          if (!this.looping) return;
+          requestAnimationFrame(draw);
+
+          const dt = Math.min(0.033, (ts - lastTs) / 1000 || 0.016);
+          lastTs = ts;
+          this.perf.sampleFrame(ts);
+
+          const t0 = now();
+          if (this.running && this.camera.isActive && this.vision.loaded) {
+            const throttle = this.perf.lowPower ? 110 : this.visionThrottle;
+            if (ts - this.lastInference > throttle) {
+              this.lastInference = ts;
+              const vr = await this.vision.processVideo(this.camera.video, ts);
+              if (vr) {
+                const state = this.gesture.analyze(vr);
+                this.latestState = state;
+                this.interaction.update(state);
+                this.trackingStable = !!state?.hands?.length;
+                this.processDrawing(state);
+              }
+            } else if (this.latestState) {
+              this.interaction.update(this.latestState);
+            }
+          }
+
+          this.physics.update(this.objects.objects, dt);
+          this.particles.update(dt, []);
+          if (this.fourD.active) this.fourD.update(dt, this.latestState);
+          this.sceneManager.updateBackgroundOverlay(this.latestState);
+          this.sceneManager.render();
+          this.perf.renderMs = now() - t0;
+          if (this.perf.shouldUpdateHUD(ts)) {
+            this.hud.update(this.latestState, dt);
+            this.perf.markHUD(ts);
+          }
+        };
+        requestAnimationFrame(draw);
+      }
+      processDrawing(state) {
+        if (!state?.hands?.length) {
+          if (this.airDrawing.isDrawing && this.airDrawing.points.length > 12) {
+            const out = this.airDrawing.finish();
+            if (out) this.interaction.spawnFromShape(out);
+          } else {
+            this.airDrawing.reset();
+          }
+          return;
+        }
+        const hand = state.hands[0];
+        const ts = now();
+        if (state.gesture === "POINT") {
+          this.airDrawing.addPoint(hand.indexTip, ts);
+        } else if (state.gesture === "PINCH") {
+          const obj = this.objects.hovered || this.objects.selected;
+          if (obj) this.objects.select(obj);
+        } else if (state.gesture === "PINCH_HOLD") {
+          this.airDrawing.addPoint(hand.indexTip, ts);
+        } else if (state.gesture === "OPEN_PALM" && this.airDrawing.points.length > 10) {
+          const out = this.airDrawing.finish();
+          if (out) this.interaction.spawnFromShape(out);
+        } else {
+          if (this.airDrawing.isDrawing && this.airDrawing.points.length > 12) {
+            const out = this.airDrawing.finish();
+            if (out) this.interaction.spawnFromShape(out);
+          } else {
+            this.airDrawing.reset();
+          }
+        }
+      }
+    }
+
+    const app = new Application();
+
+    $("errorDismissBtn").addEventListener("click", () => app.error.hide());
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        if (!window.isSecureContext) {
+          $("welcomeScreen").classList.add("hidden");
+          app.error.show("Camera access requires HTTPS or localhost.", "This page must be served over HTTPS or localhost before getUserMedia() can work.");
+          return;
+        }
+        await app.init();
+      } catch (e) {
+        app.error.handle(e, "Initialization error");
+      }
+    });
+  </script>
+</body>
+</html>
