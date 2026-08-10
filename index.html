@@ -757,7 +757,7 @@
         else if (openPalm) gesture = "OPEN_PALM";
 
         this.cursor = this.app.camera.mirror ? { x: 1 - indexTip.x, y: indexTip.y, z: indexTip.z } : { x: indexTip.x, y: indexTip.y, z: indexTip.z };
-        const smoothCursor = this.smoothPoint(`cursor-${index}`, this.cursor, this.app.settings.smoothing);
+        const smoothCursor = this.smoothPoint(`cursor-${index}`, this.cursor, this.app.settings.state.smoothing);
         this.activeGesture = gesture;
         this.confidence = confidence;
         this.pointing = point;
@@ -770,11 +770,11 @@
           pinchDist,
           palm, palmSize,
           indexTip: smoothCursor,
-          wrist: this.smoothPoint(`wrist-${index}`, { x: wrist.x, y: wrist.y, z: wrist.z || 0 }, this.app.settings.smoothing),
-          thumbTip: this.smoothPoint(`thumb-${index}`, { x: thumbTip.x, y: thumbTip.y, z: thumbTip.z || 0 }, this.app.settings.smoothing),
-          middleTip: this.smoothPoint(`middle-${index}`, { x: middleTip.x, y: middleTip.y, z: middleTip.z || 0 }, this.app.settings.smoothing),
-          ringTip: this.smoothPoint(`ring-${index}`, { x: ringTip.x, y: ringTip.y, z: ringTip.z || 0 }, this.app.settings.smoothing),
-          pinkyTip: this.smoothPoint(`pinky-${index}`, { x: pinkyTip.x, y: pinkyTip.y, z: pinkyTip.z || 0 }, this.app.settings.smoothing)
+          wrist: this.smoothPoint(`wrist-${index}`, { x: wrist.x, y: wrist.y, z: wrist.z || 0 }, this.app.settings.state.smoothing),
+          thumbTip: this.smoothPoint(`thumb-${index}`, { x: thumbTip.x, y: thumbTip.y, z: thumbTip.z || 0 }, this.app.settings.state.smoothing),
+          middleTip: this.smoothPoint(`middle-${index}`, { x: middleTip.x, y: middleTip.y, z: middleTip.z || 0 }, this.app.settings.state.smoothing),
+          ringTip: this.smoothPoint(`ring-${index}`, { x: ringTip.x, y: ringTip.y, z: ringTip.z || 0 }, this.app.settings.state.smoothing),
+          pinkyTip: this.smoothPoint(`pinky-${index}`, { x: pinkyTip.x, y: pinkyTip.y, z: pinkyTip.z || 0 }, this.app.settings.state.smoothing)
         };
       }
 
@@ -1314,7 +1314,6 @@
         this.webglCanvas = $("webgl");
         this.fxCanvas = $("fxCanvas");
         this.ctx = this.fxCanvas.getContext("2d");
-        this.clock = new THREE.Clock();
         this.scene.background = null;
         this.pickPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
         this.tempVec = new THREE.Vector3();
@@ -1434,13 +1433,13 @@
           `Selected: ${this.app.objects.selected?.userData?.name || "none"}`,
           `Hover: ${this.app.objects.hoveredLabel || "none"}`
         ].map(t => `• ${t}`).join("<br>");
-        $("sysHand").textContent = this.app.settings.enableHands ? "ON" : "OFF";
-        $("sysFace").textContent = this.app.settings.enableFace ? "ON" : "OFF";
-        $("sysSmooth").textContent = this.app.settings.smoothing.toFixed(2);
-        $("sysSensitivity").textContent = this.app.settings.gestureThreshold.toFixed(2);
-        $("smoothValue").textContent = this.app.settings.smoothing.toFixed(2);
-        $("thresholdValue").textContent = this.app.settings.gestureThreshold.toFixed(2);
-        $("particleValue").textContent = String(this.app.settings.particleCount);
+        $("sysHand").textContent = this.app.settings.state.enableHands ? "ON" : "OFF";
+        $("sysFace").textContent = this.app.settings.state.enableFace ? "ON" : "OFF";
+        $("sysSmooth").textContent = this.app.settings.state.smoothing.toFixed(2);
+        $("sysSensitivity").textContent = this.app.settings.state.gestureThreshold.toFixed(2);
+        $("smoothValue").textContent = this.app.settings.state.smoothing.toFixed(2);
+        $("thresholdValue").textContent = this.app.settings.state.gestureThreshold.toFixed(2);
+        $("particleValue").textContent = String(this.app.settings.state.particleCount);
         $("resolutionLabel").textContent = $("resolutionSelect").value;
         $("fpsLabel").textContent = $("fpsSelect").value;
         $("loadingDetail").textContent = this.app.loadingDetail;
