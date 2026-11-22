@@ -111,6 +111,11 @@ export class SettingsPanel {
     this._bindRange("gestureThreshold", "gestureVal", "gestureThreshold", (v) => v, (v) => {
       gestures.threshold = v;
     });
+    // C1: gates ONLY the auto-spawn; the air-path visual still draws.
+    this._bindToggle("airSpawnToggle", "airSpawnEnabled", (v) => {
+      gestures.airSpawnEnabled = v;
+      this.ctx.storage.setJSON("airSpawn", v);
+    });
 
     // ---- interaction ---------------------------------------------------------
     this._bindToggle("grabToggle", "grabEnabled", (v) => { gestures.grabEnabled = v; });
