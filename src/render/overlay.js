@@ -193,6 +193,30 @@ export class Overlay {
     }
   }
 
+  // C4: 300 ms expanding ring at each spawn point.
+  drawSpawnPulses(pulses) {
+    if (!pulses?.length) return;
+    const c = this.ctx;
+    const now = performance.now();
+    for (const p of pulses) {
+      const age = (now - p.t) / 300;
+      if (age < 0 || age >= 1) continue;
+      const x = this._X(p.x), y = this._Y(p.y);
+      c.strokeStyle = `rgba(105,216,255,${(1 - age).toFixed(3)})`;
+      c.lineWidth = 2.5 * (1 - age) + 0.5;
+      c.shadowBlur = 12;
+      c.shadowColor = "#69d8ff";
+      c.beginPath();
+      c.arc(x, y, 10 + age * 42, 0, Math.PI * 2);
+      c.stroke();
+      c.shadowBlur = 0;
+    }
+    // Prune expired pulses so the array can't grow.
+    for (let i = pulses.length - 1; i >= 0; i--) {
+      if (now - pulses[i].t > 400) pulses.splice(i, 1);
+    }
+  }
+
   drawCursor(point) {
     if (!this.cursorOn || !point) return;
     const c = this.ctx;
@@ -223,6 +247,7 @@ export class Overlay {
     if (state.airProgress) this.drawAirProgress(state.airPoint, state.airProgress, state.airCandidate);
     if (state.hands) this.drawHands(state.hands, reduced);
     if (state.face) this.drawFace(state.face);
+    if (state.spawnPulses) this.drawSpawnPulses(state.spawnPulses);
     if (state.cursorPoint) this.drawCursor(state.cursorPoint);
   }
 }

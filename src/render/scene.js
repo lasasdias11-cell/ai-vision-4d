@@ -19,8 +19,9 @@ export class SceneManager {
    * @param {HTMLCanvasElement} canvas
    * @param {{onGraphicsError:(err:Error)=>void}} hooks
    */
-  constructor(canvas, { onGraphicsError = () => {} } = {}) {
+  constructor(canvas, { onGraphicsError = () => {}, onToast = () => {} } = {}) {
     this.canvas = canvas;
+    this.onToast = onToast;
     this.failed = false;
     this.failure = null;
 
@@ -80,6 +81,32 @@ export class SceneManager {
     this.grabTarget = null; // ObjectManager object Group or "4D"
     this._grabPrev = new THREE.Vector3();
     this._tmpV = new THREE.Vector3();
+
+    // Per-object deletion + spawn feedback state.
+    this.lastDeleteAt = 0;
+    this._fistMs = 0;
+    this.spawnPulses = []; // {x,y,t} normalized screen coords
+  }
+
+  // C3: frustum-derived spawn plane half-extents, recomputed on resize so
+  // spawn/delete mapping tracks the actual camera instead of magic numbers.
+  _updateFrustum() {
+    const dist = 9;
+    const halfH = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * dist;
+    const halfW = halfH * (this.camera.aspect || 1);
+    this._spawnHalfW = halfW;
+    this._spawnHalfH = halfH;
+  }
+
+  // Screen-space point → world position on the spawn plane (z ≈ -2).
+  screenToWorld(point) {
+    const hw = this._spawnHalfW ?? 3.5;
+    const hh = this._spawnHalfH ?? 2.1;
+    return new THREE.Vector3(
+      (point.x - 0.5) * 2 * hw,
+      (0.5 - point.y) * 2 * hh,
+      -2,
+    );
   }
 
   resize() {
@@ -89,6 +116,7 @@ export class SceneManager {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this._updateFrustum();
   }
 
   // screenPoint: {x,y} normalized 0..1 (already mirrored). depth ~9 world units.
@@ -97,15 +125,57 @@ export class SceneManager {
     if (cursorWorld) {
       pos = cursorWorld.clone();
     } else if (screenPoint) {
-      pos = this._tmpV.set(
-        (screenPoint.x - 0.5) * 7,
-        (0.5 - screenPoint.y) * 4.2,
-        -2.5,
-      );
+      pos = this.screenToWorld(screenPoint);
     } else {
       pos = new THREE.Vector3(0, 0, -2.5);
     }
-    return this.objects.spawn(shape, pos.clone());
+    if (screenPoint) {
+      this.spawnPulses.push({ x: screenPoint.x, y: screenPoint.y, t: performance.now() });
+      if (this.spawnPulses.length > 12) this.spawnPulses.shift();
+    }
+    return this.objects.spawn(shape, pos);
+  }
+
+  // ---- per-object deletion (B1/B2/B3) ------------------------------------
+
+  // Dispose + remove a single object; clears selection and grab state.
+  // Never touches the 4D cube (it is not in objects.objects).
+  deleteObject(obj) {
+    if (!obj || !this.objects.objects.includes(obj)) return false;
+    if (this.grabTarget === obj) {
+      obj.userData.grabbed = false;
+      this.grabTarget = null;
+    }
+    const kind = obj.userData?.kind || "object";
+    this.objects.remove(obj);
+    this.onToast(`DELETED ${String(kind).toUpperCase()}`);
+    return true;
+  }
+
+  // Nearest spawned object within `radius` world units of a screen point.
+  nearestObjectAtScreen(point, radius = 1.5) {
+    if (!point) return null;
+    const w = this.screenToWorld(point);
+    let best = null;
+    let bd = radius;
+    for (const obj of this.objects.objects) {
+      const d = obj.position.distanceTo(w);
+      if (d < bd) { bd = d; best = obj; }
+    }
+    return best;
+  }
+
+  // Dock hold-to-delete / programmatic delete under the fingertit.
+  deleteNearestAtScreen(point) {
+    const obj = this.nearestObjectAtScreen(point, 1.5);
+    return obj ? this.deleteObject(obj) : false;
+  }
+
+  // B3: desktop click fallback — raycast already resolved to a pickRoot by
+  // CursorEngine.pickAtClient; only spawned objects are eligible.
+  deletePicked(root) {
+    if (!root || !this.objects.objects.includes(root)) return false;
+    return this.deleteObject(root);
   }
 
   clearObjects() {
@@ -240,6 +310,32 @@ export class SceneManager {
     if (!pinch && gesture?.name === "POINT" && cursor?.hover) {
       const root = cursor.hover.userData?.pickRoot;
       if (root && this.objects.objects.includes(root)) this.objects.select(root);
+    }
+
+    // ---- FIST-to-delete (B1) ------------------------------------------------
+    // FIST held >= 350 ms with fingertip OR palm center within 1.5 units of an
+    // object deletes it. 400 ms cooldown prevents machine-gun deletion.
+    if (gesture?.name === "FIST" && gesture.hand && cursor && !this.paused) {
+      this._fistMs += dt * 1000;
+      const nowMs = performance.now();
+      if (this._fistMs >= 350 && nowMs - this.lastDeleteAt >= 400) {
+        const tipW = cursor.world;
+        const palmW = cursor.worldOnPlane({ x: gesture.hand[9].x, y: gesture.hand[9].y });
+        let best = null;
+        let bd = 1.5;
+        for (const obj of this.objects.objects) {
+          const dTip = tipW ? obj.position.distanceTo(tipW) : Infinity;
+          const dPalm = palmW ? obj.position.distanceTo(palmW) : Infinity;
+          const d = Math.min(dTip, dPalm);
+          if (d < bd) { bd = d; best = obj; }
+        }
+        if (best && this.deleteObject(best)) {
+          this.lastDeleteAt = nowMs;
+          this._fistMs = 0;
+        }
+      }
+    } else {
+      this._fistMs = 0;
     }
 
     // ---- two-hand transforms ----------------------------------------------
