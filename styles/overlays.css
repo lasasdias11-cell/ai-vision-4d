@@ -1,0 +1,25 @@
+/* overlays.css — scanlines, vignette, camera feed styling */
+
+#scanlines{
+  position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.10;
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+  background-size:64px 64px;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,black 20%,black 80%,transparent);
+  mask-image:linear-gradient(to bottom,transparent,black 20%,black 80%,transparent);
+}
+#vignette{
+  position:absolute;inset:0;pointer-events:none;z-index:5;
+  background:radial-gradient(circle at 50% 45%,transparent 38%,rgba(0,0,0,.44) 100%);
+}
+
+/* Reduced-motion: calmer, less glow. Class is toggled on <html> (D6). */
+html.reduced-motion #scanlines{opacity:.05}
+html.reduced-motion #gestureToast,
+html.reduced-motion .icon-btn,
+html.reduced-motion .dock-btn,
+html.reduced-motion button,
+html.reduced-motion .settings-panel,
+html.reduced-motion .bootline i{transition-duration:.01ms!important}
+html.reduced-motion .guide-card{transition:none}

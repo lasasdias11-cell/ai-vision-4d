@@ -1,0 +1,72 @@
+/* boot.css — startup screen, progress bar, error box */
+
+#boot{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:#05060a;z-index:60;
+}
+.bootbox{
+  width:min(620px,90vw);padding:34px;border-radius:30px;text-align:center;
+  background:var(--glass);border:1px solid var(--stroke);
+  backdrop-filter:blur(var(--blur)) saturate(150%);
+  -webkit-backdrop-filter:blur(var(--blur)) saturate(150%);
+  box-shadow:0 24px 80px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.07);
+}
+.logo{
+  font-size:clamp(30px,6vw,62px);font-weight:750;letter-spacing:.12em;
+  background:linear-gradient(120deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.logo.small{font-size:clamp(18px,3vw,28px)}
+.subtitle{margin-top:8px;color:var(--muted);font-size:11px;letter-spacing:.08em}
+.bootline{
+  margin:26px auto 0;max-width:440px;height:4px;border-radius:99px;
+  background:rgba(255,255,255,.08);overflow:hidden;
+}
+.bootline i{
+  display:block;height:100%;width:0;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  box-shadow:0 0 18px rgba(105,216,255,.6);transition:width .35s;
+}
+#bootStatus{
+  margin-top:14px;color:rgba(255,255,255,.62);
+  font:11px ui-monospace,monospace;letter-spacing:.06em;min-height:14px;
+}
+#enable{margin-top:24px;display:none;width:100%;padding:14px}
+#enable:not([hidden]){display:block}
+
+.error-modal{
+  position:absolute;inset:0;z-index:100;display:flex;
+  align-items:center;justify-content:center;background:rgba(3,4,8,.72);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.error-panel{
+  width:min(560px,92vw);padding:26px;border-radius:24px;text-align:center;
+}
+.error-panel h2{margin:0 0 10px;color:var(--danger);font-size:15px;letter-spacing:.14em}
+.error-panel p{margin:0;color:var(--muted);font-size:12px;line-height:1.6;white-space:pre-wrap}
+.error-actions{display:flex;justify-content:center;gap:10px;margin-top:20px;flex-wrap:wrap}
+.error-actions button{padding:10px 18px}
+
+/* camera help + graphics fallback modals */
+.help-modal,.gfx-modal{
+  position:absolute;inset:0;z-index:90;display:flex;
+  align-items:center;justify-content:center;
+  background:rgba(3,4,8,.7);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.help-panel{
+  width:min(480px,92vw);padding:24px;border-radius:22px;text-align:left;
+}
+.help-panel strong{display:block;font-size:13px;letter-spacing:.12em;margin-bottom:12px}
+.help-panel ol{margin:0;padding-left:18px;color:var(--muted);font-size:12px;line-height:1.9}
+.help-panel b{color:var(--text)}
+.help-panel .error-actions{justify-content:flex-end;margin-top:18px}
+
+.gfx-modal{z-index:95}
+.gfx-panel{
+  width:min(520px,92vw);padding:34px;border-radius:28px;text-align:center;
+  background:var(--glass-strong);border:1px solid var(--danger);
+  backdrop-filter:blur(var(--blur)) saturate(150%);
+  -webkit-backdrop-filter:blur(var(--blur)) saturate(150%);
+}
+.gfx-panel p{color:var(--muted);font-size:12px;line-height:1.7;margin:14px 0 22px}
+.gfx-panel .logo.small{font-size:20px}

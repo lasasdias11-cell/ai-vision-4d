@@ -1,0 +1,49 @@
+/* guide.css — GESTURE GUIDE modal and animated cards */
+
+.guide-modal{
+  position:absolute;inset:0;z-index:50;display:flex;
+  align-items:center;justify-content:center;
+  background:rgba(3,4,8,.66);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.guide-panel{
+  width:min(880px,94vw);max-height:88vh;overflow:auto;padding:20px;border-radius:28px;
+}
+.guide-head{
+  display:flex;align-items:baseline;gap:14px;padding:4px 6px 14px;
+}
+.guide-head strong{font-size:16px;letter-spacing:.14em}
+.guide-head span{font-size:10px;color:var(--muted);letter-spacing:.06em;flex:1}
+.guide-head .icon-btn{width:34px;height:34px;flex:none}
+.guide-head .icon-btn svg{width:15px;height:15px}
+
+.guide-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:12px;padding:4px;
+}
+.guide-card{
+  border-radius:18px;padding:12px 10px 10px;text-align:center;
+  background:rgba(255,255,255,.05);border:1px solid var(--stroke2);
+  transition:border-color .25s,box-shadow .25s,transform .25s;
+}
+.guide-card .guide-canvas{
+  width:96px;height:96px;display:block;margin:0 auto 8px;
+  border-radius:14px;background:rgba(4,6,12,.5);
+  border:1px solid rgba(255,255,255,.07);
+}
+.guide-name{font-size:11px;font-weight:700;letter-spacing:.12em}
+.guide-action{font-size:9.5px;color:var(--muted);margin-top:3px;min-height:22px}
+
+.confbar{
+  margin-top:9px;height:4px;border-radius:99px;overflow:hidden;
+  background:rgba(255,255,255,.1);
+}
+.confbar i{
+  display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  transition:width .15s linear;
+}
+.confbar.live i{box-shadow:0 0 10px rgba(105,216,255,.8)}
+
+.guide-foot{
+  margin-top:14px;text-align:center;font-size:10px;color:var(--muted);letter-spacing:.08em;
+}

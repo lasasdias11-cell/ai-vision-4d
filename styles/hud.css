@@ -1,0 +1,80 @@
+/* hud.css — topbar, status chips, legend, dock, toast, hint */
+
+.topbar{
+  position:absolute;top:14px;left:14px;right:14px;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  pointer-events:none;
+}
+.topbar>*{pointer-events:auto}
+.brand{padding:11px 15px;border-radius:18px}
+.brand strong{font-size:13px;letter-spacing:.13em;display:block}
+.brand small{display:block;color:var(--muted);font-size:9px;margin-top:3px;letter-spacing:.08em}
+
+.status{
+  display:flex;align-items:center;gap:9px;padding:9px 14px;border-radius:18px;
+  font-size:10px;color:var(--muted);flex-wrap:wrap;justify-content:center;
+}
+.status .dot{
+  width:6px;height:6px;border-radius:50%;background:var(--good);
+  box-shadow:0 0 12px var(--good);flex:none;
+}
+.status b{color:var(--text);font-weight:650;min-width:2ch;text-align:left}
+
+.legend{
+  display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:18px;
+  font-size:10px;letter-spacing:.1em;color:var(--muted);
+}
+.legend #legendName{color:var(--text);font-weight:650;min-width:64px}
+#legendBars{display:inline-flex;gap:3px}
+#legendBars i{
+  width:14px;height:5px;border-radius:99px;background:rgba(255,255,255,.14);
+  transition:background .18s,box-shadow .18s;
+}
+#legendBars i.on{background:var(--accent);box-shadow:0 0 8px rgba(105,216,255,.7)}
+
+.icon-btn{
+  width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);
+  cursor:pointer;transition:transform .22s cubic-bezier(.2,.8,.2,1),background .22s,box-shadow .22s;
+}
+.icon-btn:hover{transform:scale(1.05);background:rgba(255,255,255,.15);box-shadow:0 8px 30px rgba(0,0,0,.22)}
+.icon-btn svg{width:20px;height:20px}
+#settingsBtn svg{transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+#settingsBtn.open svg{transform:rotate(90deg)}
+
+.bottom-dock{
+  position:absolute;z-index:25;left:50%;bottom:18px;transform:translateX(-50%);
+  display:flex;gap:7px;padding:7px;border-radius:24px;
+}
+.dock-btn{
+  min-width:76px;padding:8px 12px;border-radius:17px;cursor:pointer;
+  background:rgba(255,255,255,.07);border:1px solid transparent;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  font-size:10px;color:rgba(255,255,255,.72);transition:.2s;
+}
+.dock-btn svg{width:20px;height:20px}
+.dock-btn:hover,.dock-btn.active{
+  background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.12);color:#fff;
+}
+.dock-btn:active{transform:scale(.96)}
+
+#gestureToast{
+  position:absolute;z-index:40;left:50%;bottom:88px;
+  transform:translate(-50%,8px) scale(.97);padding:10px 15px;border-radius:18px;
+  background:rgba(15,17,24,.68);border:1px solid rgba(255,255,255,.13);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  color:#fff;font-size:11px;letter-spacing:.06em;
+  opacity:0;transition:.28s cubic-bezier(.2,.8,.2,1);pointer-events:none;
+  white-space:nowrap;
+}
+#gestureToast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+
+#hint{
+  position:absolute;z-index:15;left:50%;top:50%;transform:translate(-50%,-50%);
+  padding:11px 15px;border-radius:18px;white-space:nowrap;
+  background:rgba(10,12,18,.42);border:1px solid rgba(255,255,255,.10);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  color:rgba(255,255,255,.7);font-size:11px;
+  opacity:0;transition:.35s;pointer-events:none;
+}
+#hint.show{opacity:1}

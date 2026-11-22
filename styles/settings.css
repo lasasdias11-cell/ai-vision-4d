@@ -1,0 +1,66 @@
+/* settings.css — settings panel and all controls */
+
+.settings-panel{
+  position:absolute;z-index:30;top:66px;right:14px;
+  width:min(380px,calc(100vw - 28px));max-height:calc(100vh - 88px);
+  overflow:auto;padding:10px;border-radius:26px;
+  opacity:0;transform:translateY(-10px) scale(.97);
+  pointer-events:none;transition:opacity .25s,transform .35s cubic-bezier(.2,.8,.2,1);
+  scrollbar-width:thin;
+}
+.settings-panel.open{opacity:1;transform:none;pointer-events:auto}
+.settings-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 10px 8px;
+}
+.settings-head strong{font-size:17px}
+.settings-head span{font-size:10px;color:var(--muted)}
+
+.card{
+  padding:14px;border-radius:20px;margin:8px 0;
+  background:rgba(255,255,255,.055);border:1px solid var(--stroke2);
+}
+.card h3{margin:0 0 11px;font-size:10px;letter-spacing:.12em;color:rgba(235,240,255,.68)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+button,select{
+  border-radius:14px;padding:10px 12px;cursor:pointer;
+  background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.11);
+  color:var(--text);transition:background .18s,transform .18s,border-color .18s;
+}
+button:hover{background:rgba(255,255,255,.13)}
+button:active{transform:scale(.97)}
+button.primary{
+  background:linear-gradient(135deg,rgba(78,190,255,.42),rgba(117,105,255,.38));
+  border-color:rgba(120,215,255,.35);
+}
+button.danger{background:rgba(255,70,105,.12);border-color:rgba(255,90,120,.22)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.wide{width:100%;margin-top:10px}
+
+label{display:block;font-size:10px;color:var(--muted);margin:11px 0 5px}
+.value{float:right;color:var(--accent)}
+select{width:100%}
+input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0 2px}
+
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 2px;
+}
+.toggle-row span{font-size:11px}
+.switch{
+  width:44px;height:26px;padding:3px;border-radius:99px;flex:none;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.1);
+  transition:background .2s;
+}
+.switch i{
+  display:block;width:18px;height:18px;border-radius:50%;background:#fff;
+  transition:transform .2s;
+}
+.switch.on{background:rgba(75,205,255,.55)}
+.switch.on i{transform:translateX(18px)}
+
+#debug{
+  font:10px/1.6 ui-monospace,monospace;color:var(--muted);
+  white-space:pre-wrap;max-height:220px;overflow:auto;
+}
