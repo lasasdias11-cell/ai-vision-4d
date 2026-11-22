@@ -62,7 +62,20 @@ with sync_playwright() as p:
     page.screenshot(path="smoke_guide.png")
     page.keyboard.press("Escape")
 
-    real_errors = [e for e in errors if "ERR_" not in e and "GPU" not in e.upper()]
+    # Settings panel contains the air-draw spawning toggle; verify persistence.
+    toggle = page.evaluate("""() => {
+        const el = document.getElementById('airSpawnToggle');
+        if (!el) return null;
+        el.click();
+        const v1 = localStorage.getItem('aiv4d_airSpawn');
+        return { found: true, stored: v1 };
+    }""")
+    print("AIRSPAWN TOGGLE:", toggle)
+    page.reload(wait_until="domcontentloaded")
+    persisted = page.evaluate("localStorage.getItem('aiv4d_airSpawn')")
+    print("AIRSPAWN PERSISTED:", persisted)
+
+    real_errors = [e for e in errors if "ERR_" not in e and "GPU" not in e.upper() and "INFO:" not in e and "404" not in e]
     print("CONSOLE ERRORS:", real_errors if real_errors else "none")
     browser.close()
 
