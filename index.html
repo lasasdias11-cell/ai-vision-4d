@@ -56,7 +56,7 @@
       <span>GST</span><b id="sGesture">NONE</b>
       <span>CF</span><b id="sConfidence">0.00</b>
       <span>FPS</span><b id="sFPS">0</b>
-      <span>TRK</span><b id="sTracking">&mdash;</b>
+      <span>TRK</span><i id="trackDot" class="tdot grey" title="hand tracking state"></i><b id="sTracking">&mdash;</b>
       <span>REN</span><b id="sRenderer">&mdash;</b>
       <span>MOD</span><b id="sMode">SELECT</b>
     </div>
@@ -141,6 +141,9 @@
     <div class="card">
       <h3>SYSTEM STATUS</h3>
       <div id="debug">Waiting for camera&hellip;</div>
+      <h3 style="margin-top:12px">HAND TRACKING DIAGNOSTICS</h3>
+      <div id="diagBlock">—</div>
+      <button id="copyDiag" class="wide" style="margin-top:8px">COPY DIAGNOSTICS</button>
     </div>
   </aside>
 
