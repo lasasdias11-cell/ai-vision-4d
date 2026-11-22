@@ -110,6 +110,7 @@
       <input id="smooth" type="range" min=".45" max=".94" step=".01" value=".78">
       <label for="gestureThreshold">GESTURE CONFIDENCE <span class="value" id="gestureVal">0.55</span></label>
       <input id="gestureThreshold" type="range" min=".35" max=".85" step=".01" value=".55">
+      <div class="toggle-row"><span>Air-draw spawning</span><button id="airSpawnToggle" class="switch" aria-pressed="false"><i></i></button></div>
     </div>
 
     <div class="card">
@@ -195,7 +196,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z"/></svg>
       <span>Gesture</span>
     </button>
-    <button class="dock-btn" id="dockObject" aria-label="Spawn object">
+    <button class="dock-btn" id="dockObject" aria-label="Spawn at fingertip · Hold to delete">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9Z"/><path d="M12 11l8-4.5M12 11v9M12 11L4 6.5"/></svg>
       <span>Objects</span>
     </button>
