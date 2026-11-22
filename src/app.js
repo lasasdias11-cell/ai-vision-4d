@@ -1,7 +1,7 @@
 // app.js — entry point. Owns the engine singletons, the boot sequence, and
 // the single guarded rAF loop (D4). No other module imports these instances.
 
-import { MODES } from "./config.js";
+import { MODES, STORAGE_KEYS } from "./config.js";
 import { $, on } from "./utils/dom.js";
 import { StorageManager } from "./utils/storage.js";
 import { ErrorManager } from "./utils/errors.js";
@@ -39,6 +39,10 @@ export class App {
       this.storage.dataVersion = 1;
     }
     this.settings = this.storage.loadSettings();
+    // C1: air-spawn toggle persists under its own aiv4d_airSpawn key.
+    this.settings.airSpawnEnabled = this.storage.getBool(
+      STORAGE_KEYS.airSpawn, this.settings.airSpawnEnabled ?? false,
+    );
     document.documentElement.classList.toggle("reduced-motion", !!this.settings.reducedMotion);
 
     this.errors = new ErrorManager({
@@ -73,6 +77,7 @@ export class App {
       minStableFrames: this.settings.minStableFrames,
       gestureCooldownMs: this.settings.gestureCooldownMs,
     });
+    this.gestures.airSpawnEnabled = this.settings.airSpawnEnabled;
 
     this.mode = MODES.includes(this.settings.mode) ? this.settings.mode : "SELECT";
     this.airDraw = new AirDrawingEngine({
@@ -142,6 +147,9 @@ export class App {
       reconnectCamera: () => this.reconnectCamera(),
       applyCameraSettings: () => this.applyCameraSettings(),
       spawnRandom: () => this.spawnRandom(),
+      spawnCube: () => this.spawnAtPoint("cube"),
+      spawnShape: (shape) => this.spawnAtPoint(shape),
+      deleteUnderFingertip: () => this.deleteUnderFingertip(),
       clearObjects: () => this.clearObjects(),
       toggleFullscreen: () => this.toggleFullscreen(),
     });
@@ -154,6 +162,9 @@ export class App {
       toggleSettings: () => this.settingsPanel.toggle(),
       toggleFullscreen: () => this.toggleFullscreen(),
       spawnRandom: () => this.spawnRandom(),
+      spawnCube: () => this.spawnAtPoint("cube"),
+      spawnShape: (shape) => this.spawnAtPoint(shape),
+      deleteUnderFingertip: () => this.deleteUnderFingertip(),
       toggle4D: () => this.toggle4D(),
       togglePause: () => this.togglePause(),
       closePanels: () => this.closePanels(),
@@ -207,6 +218,7 @@ export class App {
     if (this.scene) return;
     this.scene = new SceneManager($("three"), {
       onGraphicsError: (e) => this._showGraphicsError(e),
+      onToast: (s) => this.toast(s),
     });
     if (this.scene.failed) {
       const e = new Error(this.scene.failure?.message || "WebGL renderer could not be created.");
@@ -428,6 +440,7 @@ export class App {
       airProgress: this.airDraw.progress > 0 ? this.airDraw.progress : null,
       airPoint: this.airDraw._lastPoint,
       airCandidate: this.airDraw.candidate,
+      spawnPulses: this.scene?.spawnPulses,
       cursorPoint: g.point,
       reducedMotion: !!this.settings.reducedMotion,
     });
@@ -510,8 +523,18 @@ export class App {
   }
 
   _onAirShape(shape, path, point) {
+    // C1: auto-spawn is gated by the persisted toggle — the air-path visual
+    // is unaffected; only the spawn action is suppressed.
+    if (!this.gestures.airSpawnEnabled) return;
     const spawnShape = AIR_SHAPE_MAP[shape] || "icosahedron";
     this.spawnAtPoint(spawnShape, shape);
+  }
+
+  // B2: dock hold-to-delete — nearest spawned object under the fingertip.
+  deleteUnderFingertip() {
+    if (!this.scene || this.scene.failed) return false;
+    const g = this._lastGesture;
+    return this.scene.deleteNearestAtScreen(g?.point || null);
   }
 
   spawnAtPoint(shape = "cube", tag = null) {
@@ -620,6 +643,16 @@ Secure context: ${window.isSecureContext ? "YES" : "NO"}`
     on($("camHelpRetry"), "click", () => {
       $("camHelp").hidden = true;
       this.startCamera();
+    });
+
+    // B3: desktop click-to-delete fallback on the 3D canvas.
+    const threeCanvas = $("three");
+    on(threeCanvas, "click", (e) => {
+      if (!this.scene || this.scene.failed || !this.cursor) return;
+      const root = this.cursor.pickAtClient(e.clientX, e.clientY, threeCanvas.getBoundingClientRect());
+      if (root && this.scene.deletePicked(root)) {
+        // toast already emitted by deleteObject via onToast
+      }
     });
 
     window.addEventListener("resize", () => {

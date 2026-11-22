@@ -5,7 +5,8 @@ export const VERSION = "4.0.0";
 
 export const STORAGE_KEYS = Object.freeze({
   settings: "settings",
-  guideSeen: "guide_seen",
+  guideSeen: "guideSeen",
+  airSpawn: "airSpawn",
   version: "version",
 });
 
@@ -78,6 +79,7 @@ export const DEFAULTS = Object.freeze({
 
   // air drawing
   airDrawEnabled: true,
+  airSpawnEnabled: false, // auto-spawn on closed loop — OFF by default (C1)
   airMaxSamples: 90,
   airDwellMs: 700,
   airCooldownMs: 2000,
