@@ -47,6 +47,32 @@ export class CursorEngine {
     return this.hover;
   }
 
+  // World position on the drag plane for an arbitrary screen point — used by
+  // FIST-delete to test the palm center as well as the fingertip.
+  worldOnPlane(point) {
+    if (!point) return null;
+    _ndc.set(point.x * 2 - 1, -(point.y * 2 - 1));
+    _ray.setFromCamera(_ndc, this.camera);
+    return _ray.ray.intersectPlane(this.dragPlane, this._planeAlt || (this._planeAlt = new THREE.Vector3()))
+      ? this._planeAlt
+      : null;
+  }
+
+  // Desktop click fallback: raycast client coords to a pickable object root.
+  pickAtClient(clientX, clientY, rect) {
+    _ndc.set(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -(((clientY - rect.top) / rect.height) * 2 - 1),
+    );
+    _ray.setFromCamera(_ndc, this.camera);
+    const pickables = this.getPickables();
+    if (!pickables.length) return null;
+    _hit.length = 0;
+    _ray.intersectObjects(pickables, false, _hit);
+    const root = _hit[0]?.object?.userData?.pickRoot;
+    return root && this.getPickables().length ? root : null;
+  }
+
   // World-space position for spawning an object at a screen point.
   worldAtScreen(point, distance = 9) {
     _ndc.set(point.x * 2 - 1, -(point.y * 2 - 1));

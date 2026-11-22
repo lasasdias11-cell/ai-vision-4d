@@ -8,9 +8,12 @@
 
 import { polygonArea, clamp } from "../utils/math.js";
 
-const MIN_POINTS = 12;
+const MIN_POINTS = 24;
 const MIN_AREA = 0.004; // normalized-coordinate shoelace area
-const CLOSE_EPS = 0.09; // endpoint gap as fraction of bbox diagonal
+const MIN_DIM = 0.09; // min bbox width AND height, fraction of screen (C2)
+const CLOSE_RATIO = 0.22; // endpoint gap as fraction of max(w,h) (C2)
+const STILL_MS = 350; // must hold still this long after loop closure (C2)
+const STILL_EPS = 0.03; // max drift allowed while "still", normalized units
 const DWELL_MS = 700;
 const COOLDOWN_MS = 2000;
 const RESAMPLE_N = 64;
@@ -78,7 +81,10 @@ export class AirDrawingEngine {
 
   _tick(nowMs) {
     const closed = this._isClosedLoop();
-    if (!closed) {
+    // C2: a closed loop is not enough — the hand must also be still for
+    // STILL_MS after closure, or the candidate cancels silently.
+    const still = closed && this._isStill(nowMs);
+    if (!closed || !still) {
       this._closedSince = 0;
       this.progress = 0;
       this.candidate = null;
@@ -110,11 +116,27 @@ export class AirDrawingEngine {
       if (q.x > maxX) maxX = q.x;
       if (q.y > maxY) maxY = q.y;
     }
-    const diag = Math.hypot(maxX - minX, maxY - minY) || 1;
+    const diag = Math.max(maxX - minX, maxY - minY) || 1;
     const gap = Math.hypot(last.x - first.x, last.y - first.y);
-    // Path must be old enough to have dwelt a little AND endpoints near each other.
+    // C2: min width AND height, and endpoint gap < 22% of the larger extent.
+    if ((maxX - minX) < MIN_DIM || (maxY - minY) < MIN_DIM) return false;
+    if (gap / diag >= CLOSE_RATIO) return false;
     const span = last.t - first.t;
-    return gap / diag < CLOSE_EPS && span > 250;
+    return span > 250;
+  }
+
+  // C2: fingertip must hold still for STILL_MS after the loop closes.
+  _isStill(nowMs) {
+    const p = this.path;
+    if (p.length < 2) return false;
+    const anchor = p[p.length - 1];
+    let maxDrift = 0;
+    for (let i = p.length - 1; i >= 0; i--) {
+      if (nowMs - p[i].t > STILL_MS) break;
+      const d = Math.hypot(p[i].x - anchor.x, p[i].y - anchor.y);
+      if (d > maxDrift) maxDrift = d;
+    }
+    return maxDrift <= STILL_EPS;
   }
 
   // Resample to N points by arc length, then analyze direction changes.
