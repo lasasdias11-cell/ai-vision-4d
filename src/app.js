@@ -1,7 +1,7 @@
 // app.js — entry point. Owns the engine singletons, the boot sequence, and
 // the single guarded rAF loop (D4). No other module imports these instances.
 
-import { MODES, STORAGE_KEYS } from "./config.js";
+import { MODES, STORAGE_KEYS, VERSION } from "./config.js";
 import { $, on } from "./utils/dom.js";
 import { StorageManager } from "./utils/storage.js";
 import { ErrorManager } from "./utils/errors.js";
@@ -68,6 +68,8 @@ export class App {
       faceEnabled: this.settings.faceEnabled,
       inferenceRate: this.settings.inferenceRate,
     });
+    this.vision.onInferenceDisabled = (model) =>
+      this.toast(`${model} INFERENCE DISABLED — see System Status`);
 
     this.gestures = new GestureEngine({
       smoothing: this.settings.smoothing,
@@ -272,7 +274,11 @@ export class App {
     if (err?.name === "CancelledError") return;
     // If a vision stage failed or timed out, cancel the in-flight model load
     // so partially-initialized landmarkers are closed (D9).
-    if (/VISION/i.test(stageLabel || "")) this.vision.cancel();
+    if (/VISION/i.test(stageLabel || "")) {
+      this.vision.cancel();
+      this.vision.failed = true;
+      this.vision.failReason = err?.message || String(err);
+    }
     if (err?.name === "GraphicsUnavailable") {
       this.boot.setStatus("GRAPHICS UNAVAILABLE");
       return;
@@ -419,7 +425,12 @@ export class App {
     const video = this.camera.video;
     const visionOut = this.vision.update(video, now);
     this._lastVision = visionOut;
-    const g = this.gestures.update(visionOut.hands, now);
+    // FIX-5/F6: map raw landmarks → display-normalized coords ONCE here so
+    // gestures, cursor, scene and overlay all share identical screen space.
+    this.overlay.updateMapping(video);
+    const hands = this.overlay.mapper.mapHands(visionOut.hands);
+    const face = this.overlay.mapper.mapFace(visionOut.face);
+    const g = this.gestures.update(hands, now);
     this._lastGesture = g;
 
     if (this.scene && !this.scene.failed) {
@@ -432,8 +443,8 @@ export class App {
     }
 
     this.overlay.render({
-      hands: visionOut.hands,
-      face: visionOut.face,
+      hands,
+      face,
       trails: this.gestures.trails,
       trailsEnabled: this.settings.trails,
       airPath: this.airDraw.path,
@@ -601,19 +612,38 @@ export class App {
     this._toastTimer = setTimeout(() => el.classList.remove("show"), 1600);
   }
 
+  // Diagnostics block — consumed by the System Status card + COPY button.
+  getDiagnostics() {
+    const v = this.vision;
+    const video = this.camera.video;
+    const mem = performance.memory
+      ? `JS heap: ${(performance.memory.usedJSHeapSize / 1048576).toFixed(1)} MB`
+      : "JS heap: n/a";
+    return [
+      `AI VISION 4D ${VERSION} — ${new Date().toISOString()}`,
+      `Secure context: ${window.isSecureContext ? "YES" : "NO"}`,
+      `Camera: ${this.camera.width}×${this.camera.height} @ ${safeFixed(this.camera.fps, 0)} FPS • state ${this.camera.state}`,
+      `Video: readyState ${video?.readyState ?? "n/a"} • ${video?.videoWidth ?? 0}×${video?.videoHeight ?? 0}px`,
+      `Overlay: ${Math.round(this.overlay.w)}×${Math.round(this.overlay.h)} CSS px • dpr ${safeFixed(this.overlay._dpr, 2)}`,
+      `Vision ready: ${v.ready ? "yes" : "no"} • failed: ${v.failed ? "yes (" + v.failReason + ")" : "no"}`,
+      `Hand model: ${v.handLandmarker ? "loaded" : "missing"} • Face model: ${v.faceLandmarker ? "loaded" : (v.faceError ? "missing (" + (v.faceError.message || v.faceError) + ")" : "missing")}`,
+      `Last skip: ${v.lastSkip || "none"}`,
+      `Hand inference: ${v.handEnabled ? "enabled" : "disabled"} • ${v.handErrors} total errors • last: ${v.lastHandError || "none"}`,
+      `Face inference: ${v.faceEnabled ? "enabled" : "disabled"} • ${v.faceErrors} total errors • last: ${v.lastFaceError || "none"}`,
+      `Infer: hand ${safeFixed(v.handInferMs, 1)} ms • face ${safeFixed(v.faceInferMs, 1)} ms • measured ~${safeFixed(v.inferencesPerSec, 1)} infer/s`,
+      `Hands detected: ${this._lastVision?.hands?.length ?? 0}/2 • face: ${this._lastVision?.face?.length ?? 0}/1`,
+      `Gesture: ${this._lastGesture?.name ?? "NONE"} • confidence ${safeFixed(this._lastGesture?.confidence ?? 0, 2)}`,
+      `Mode: ${this.mode} • objects: ${this.scene?.objects.objects.length ?? 0}`,
+      `Renderer: ${this.scene ? (this.scene.failed ? "unavailable" : "WebGL2") : "not initialized"}`,
+      mem,
+    ].join("\n");
+  }
+
   _updateHUD() {
     const g = this._lastGesture;
     const v = this._lastVision;
     const scene = this.scene;
-    const debugText = scene
-      ? `Camera: ${this.camera.width}×${this.camera.height} @ ${safeFixed(this.camera.fps, 0)} FPS
-Vision: ${this.vision.delegate} • infer ${safeFixed(this.vision.inferMs, 1)} ms (hand ${safeFixed(this.vision.handInferMs, 1)} / face ${safeFixed(this.vision.faceInferMs, 1)})
-Hands: ${v.hands.length}/2 • Face: ${v.face.length}/1
-Gesture: ${g.name} • confidence ${safeFixed(g.confidence, 2)}
-Mode: ${this.mode} • objects: ${scene.objects.objects.length}
-Pixel ratio: ${safeFixed(scene.pixelRatio, 2)} • calibrated fps: ${safeFixed(this._calibratedFps, 0)}
-Secure context: ${window.isSecureContext ? "YES" : "NO"}`
-      : "3D engine not initialized.";
+    const debugText = this.getDiagnostics();
 
     this.hud.update({
       camera: this.camera.active ? "CONNECTED" : this.camera.state.toUpperCase(),
@@ -628,6 +658,22 @@ Secure context: ${window.isSecureContext ? "YES" : "NO"}`
       mode: this.mode,
       debugText,
     });
+
+    // TRACK dot: grey=not ready, yellow=skipping, red=errors/disabled,
+    // blue=ready but no hands, cyan=hands detected.
+    const td = $("trackDot");
+    let cls = "grey";
+    if (!this.vision.ready) cls = "grey";
+    else if (this.vision.lastSkip) cls = "yellow";
+    else if (this.vision.handErrors > 0 || !this.vision.handEnabled) cls = "red";
+    else if ((v.hands?.length ?? 0) === 0) cls = "blue";
+    else cls = "cyan";
+    td.className = "tdot " + cls;
+    td.title = `TRACK: ${cls} • skip=${this.vision.lastSkip || "none"} • handErr=${this.vision.handErrors}`;
+
+    // Diagnostics panel (System Status card) — throttled with HUD.
+    const diag = $("diagBlock");
+    if (diag) diag.textContent = debugText;
   }
 
   _wireGlobal() {
@@ -658,6 +704,24 @@ Secure context: ${window.isSecureContext ? "YES" : "NO"}`
     window.addEventListener("resize", () => {
       this.scene?.resize();
       this.overlay.resize();
+      this.overlay.updateMapping(this.camera.video);
+    });
+    // FIX-5: remap when video metadata arrives or the overlay box changes.
+    this.camera.video.addEventListener("loadedmetadata", () => {
+      this.overlay.resize();
+      this.overlay.updateMapping(this.camera.video);
+    });
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(() => {
+        this.overlay.resize();
+        this.overlay.updateMapping(this.camera.video);
+      }).observe($("visionOverlay"));
+    }
+    on($("copyDiag"), "click", () => {
+      const text = this.getDiagnostics();
+      (navigator.clipboard?.writeText(text) || Promise.reject(new Error("clipboard unavailable")))
+        .then(() => this.toast("DIAGNOSTICS COPIED"))
+        .catch((e) => this.errors.show(e, "Clipboard write failed"));
     });
     navigator.mediaDevices?.addEventListener?.("devicechange", () => {
       this.camera.enumerate().then(() => {
