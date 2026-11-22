@@ -58,6 +58,20 @@
 }
 .dock-btn:active{transform:scale(.96)}
 
+/* spawn shape palette popover (C5) */
+.spawn-palette{
+  position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);
+  display:flex;flex-wrap:wrap;gap:6px;max-width:340px;padding:10px;
+  border-radius:18px;z-index:26;justify-content:center;
+}
+.spawn-palette[hidden]{display:none}
+.palette-btn{
+  padding:6px 9px;font-size:9px;letter-spacing:.06em;border-radius:10px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  color:rgba(255,255,255,.75);cursor:pointer;transition:.15s;
+}
+.palette-btn:hover{background:rgba(105,216,255,.2);color:#fff;border-color:rgba(105,216,255,.4)}
+
 #gestureToast{
   position:absolute;z-index:40;left:50%;bottom:88px;
   transform:translate(-50%,8px) scale(.97);padding:10px 15px;border-radius:18px;
